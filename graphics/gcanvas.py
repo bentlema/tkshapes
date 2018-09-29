@@ -54,10 +54,11 @@ class GCanvas(Frame):
         self.window_loc_x = int((self.screen_width / 2) - (self.window_width / 2))
         self.window_loc_y = int((self.screen_height / 2) - (self.window_height / 2))
 
+        # The <Configure> event will be triggered when the window is moved or re-sized
         self.root.bind('<Configure>', self.window_update_callback)
 
         # Create our Tk Canvas
-        self.canvas = Canvas(self.root, width=self.canvas_width, height=self.canvas_height,
+        self.canvas = Canvas(self, width=self.canvas_width, height=self.canvas_height,
                              borderwidth=0, highlightthickness=0)
 
         # Draw and tag a background rectangle which will give us the ability to scroll the canvas only when
@@ -70,9 +71,11 @@ class GCanvas(Frame):
         self.canvas.create_rectangle(0, 0, self.canvas_width, self.canvas_height,
                                      fill=self.bg_color, outline=self.bg_color, tag=self.tag)
 
-        # Draw a dot off the screen that we will use to keep track of a width and activewidth, which
-        # we will use on all other canvas objects as well.  Actually, we should probably just use
-        # a pair of instance variables, but want to try this first.
+        # TODO: Draw a dot off the screen that we will use to keep track of a width and activewidth, which
+        # TODO: we will use on all other canvas objects as well.  Actually, we should probably just use
+        # TODO: a pair of instance variables, but want to try this first. Actually, NO, we should start to
+        # TODO: keep track of the GObjects on the GCanvas in a Dictionary, with the key being the name tag
+        # TODO: given when the GObject is created.  Will come back to this...
 
         self.canvas.create_oval(-100, -100, -100, -100, width=1, activewidth=0, tag="scale_on_zoom_1_0")
         self.canvas.create_oval(-100, -100, -100, -100, width=2, activewidth=2, tag="scale_on_zoom_2_2")
@@ -108,7 +111,7 @@ class GCanvas(Frame):
         self.canvas.addtag_withtag("scale_on_zoom_1_0", "graph_paper")
 
         # Ensure that all canvas objects tagged as 'graph_paper' are pushed down to the lowest layer,
-        # as all subsequently-created objects will be dragable across the top of the canvas
+        # as all subsequently-created objects will be draggable across the top of the canvas
         self.canvas.tag_lower(self.tag)
 
         # Create the scrollbars and associate one with the canvas
@@ -166,8 +169,6 @@ class GCanvas(Frame):
         # Initial size and placement of window
         self.update_window_geometry()
 
-        # Pack the canvas so that it is shown within its Frame
-        self.canvas.pack(fill="both", expand=True)
 
     def window_update_callback(self, event):
         print(event)
@@ -257,11 +258,8 @@ class GCanvas(Frame):
             self.canvas.yview_scroll(-1 * event.delta, "units")
 
     def on_zoom(self, event):
-        # Currently we scale the canvas to simulate a zoom in/out
-        # We scale about the current location of the pointer, which may not be the most intuitive
-        # Let's try scaling about the center of the viewable canvas area instead (will try later)
-        # For now, just make sure your mouse pointer is in the center of the window when zooming,
-        # to get the traditional type of zooming you'd expect in most apps
+        # We scale the canvas to simulate a zoom in/out
+        # We scale about the current location of the pointer
         # print("\n\nmouse pointer {},{}".format(event.x, event.y))
         sf = 1.0
         w = self.canvas.winfo_width()
@@ -295,9 +293,12 @@ class GCanvas(Frame):
         # For items with initial line width 1, and active width 0, they should be tagged scale_on_zoom_1_0
         # For items with initial line width 2, and active width 5, they should be tagged scale_on_zoom_2_5
 
-        for tag in (
-        "scale_on_zoom_1_0", "scale_on_zoom_2_2", "scale_on_zoom_5_5", "scale_on_zoom_7_7", "scale_on_zoom_9_9",
-        "scale_on_zoom_2_5"):
+        for tag in ("scale_on_zoom_1_0",
+                    "scale_on_zoom_2_2",
+                    "scale_on_zoom_5_5",
+                    "scale_on_zoom_7_7",
+                    "scale_on_zoom_9_9",
+                    "scale_on_zoom_2_5"):
             current_width = self.canvas.itemcget(tag, "width")
             current_activewidth = self.canvas.itemcget(tag, "activewidth")
             new_width = float(current_width) * sf
@@ -328,20 +329,7 @@ class GCanvas(Frame):
         self._drag_data["end_x"] = x
         self._drag_data["end_y"] = y
         self.canvas.delete("selection_box")
-        # self.canvas.create_rectangle(
-        #     self._drag_data["start_x"],
-        #     self._drag_data["start_y"],
-        #     self._drag_data["end_x"],
-        #     self._drag_data["end_y"],
-        #     tags="selection_box")
-        # ids = self.canvas.find_enclosed(
-        #     self._drag_data["start_x"],
-        #     self._drag_data["start_y"],
-        #     self._drag_data["end_x"],
-        #     self._drag_data["end_y"])
-        # Need to tag all ids returned with the "selected" tag
-        # for id in (ids):
-        #    self.canvas.addtag_withtag("selected", id)
+        # for all items within the selection box, add the "selected" tag, and then trigger the virtual <<Selection>> event
         self.canvas.addtag_enclosed("selected", self._drag_data["start_x"], self._drag_data["start_y"],
                                     self._drag_data["end_x"], self._drag_data["end_y"])
         self.canvas.event_generate("<<Selection>>")

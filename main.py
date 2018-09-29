@@ -12,6 +12,9 @@ gcanvas = GCanvas(root,
                   canvas_height=10000
                  )
 
+# Pack the GCanvas so that it is shown within its Frame
+gcanvas.pack(fill="both", expand=True)
+
 foo = BufferGate(gcanvas, "Foo", 5100, 5100)
 
 bar = GRect(gcanvas, "Bar", 5200, 5200)
