@@ -3,7 +3,7 @@
 import tkinter as tk
 import tkinter.ttk as ttk
 
-from graphics import AppRootWindow, GCanvas, BufferGate, GRect
+from graphics import AppRootWindow, GCanvas, BufferGate, GRect, GOval
 
 root = tk.Tk()
 
@@ -29,6 +29,8 @@ foo = BufferGate(gcanvas, "Foo", 5100, 5100)
 #gcanvas.add(foo)
 
 bar = GRect(gcanvas, "Bar", 5200, 5200, 100, 200)
+
+cir = GOval(gcanvas, "Cir", 5400, 5200, 100, 100)
 
 root.mainloop()
 

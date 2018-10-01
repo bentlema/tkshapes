@@ -213,3 +213,32 @@ class GRect(GObject):
 
 
 
+class GOval(GObject):
+    ''' Draw circle on a canvas '''
+
+    def __init__(self, gcanvas, name_tag, initial_x, initial_y, width, height):
+
+        # Initialize parent GObject class
+        super().__init__(gcanvas, name_tag, initial_x, initial_y)
+
+        self.canvas_item = self.canvas.create_oval(self.x, self.y, self.x + width, self.y + height,
+                                                        outline='blue',
+                                                        activeoutline='orange',
+                                                        fill='white',
+                                                        width=2,
+                                                        activewidth=5,
+                                                        tags=name_tag)
+
+        self.canvas.addtag_withtag("scale_on_zoom_2_5", self.canvas_item)
+        self.canvas.addtag_withtag(self.tag + "dragable", self.canvas_item)
+
+        # Tag the specific canvas items we want to activate (highlight) together
+        self.canvas.addtag_withtag(self.tag + "activate_together", self.canvas_item)
+
+        # add bindings for highlighting upon <Enter> and <Leave> events
+        self.canvas.tag_bind(self.tag + "activate_together", "<Enter>", self.on_enter)
+        self.canvas.tag_bind(self.tag + "activate_together", "<Leave>", self.on_leave)
+
+        # add bindings for selection - must be done for every gate, as this type of binding
+        # does not work when inheriting from the parent class
+        self.canvas.bind("<<Selection>>", self.on_selection_event, "+")
