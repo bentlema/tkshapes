@@ -3,19 +3,20 @@ import math
 class GObject:
     """ The parent class for all objects that can be placed on a GCanvas """
 
-    def __init__(self, gcanvas, name_tag, initial_x, initial_y):
+    def __init__(self, initial_x, initial_y, name_tag=None):
 
         # Remember where I'm drawn on the canvas
         self.x = initial_x
         self.y = initial_y
 
         # Remember my GCanvas
-        self.gcanvas = gcanvas
+        self.gcanvas = None
 
         # Remember the canvas that I'm drawn on
-        self.canvas = gcanvas.canvas
+        self.canvas = None
 
         # my primary name tag
+        # TOOD: if no name_tag is given, we need to generate a random tag name
         self.tag = name_tag
 
         # my canvas item - this will get set to something in the sub-class that inherits from me
@@ -27,6 +28,16 @@ class GObject:
         # my selection status (am I selected or not)
         self.selected = False
 
+    # Tell the GObject what GCanvas to draw itself on
+    def add_to(self, gcanvas):
+        self.gcanvas = gcanvas
+        self.canvas = gcanvas.canvas
+        self.add_item()  # Add the item to the canvas
+        self.gcanvas.add(self.tag, self.canvas_item)  # Let the GCanvas know we exist
+        self.show_item() # GObjects are hidden by default
+        self.add_mouse_bindings()
+
+    def add_mouse_bindings(self):
         # add bindings for selection toggle on/off using Command-Click
         self.canvas.tag_bind(self.tag + "dragable", "<Command-ButtonPress-1>", self.on_command_button_press)
 
@@ -138,27 +149,35 @@ class GObject:
         outline_width = self.canvas.itemcget("scale_on_zoom_2_5", "width")
         self.canvas.itemconfigure(self.canvas_item, outline='blue', width=outline_width)
 
+    def hide_item(self):
+        self.canvas.itemconfigure(self.canvas_item, state="hidden")
+
+    def show_item(self):
+        self.canvas.itemconfigure(self.canvas_item, state="normal")
+
 
 class BufferGate(GObject):
     """The Buffer Gate draws itself on a canvas"""
 
-    def __init__(self, gcanvas, name_tag, initial_x, initial_y):
+    def __init__(self, initial_x, initial_y, name_tag=None):
 
         # Initialize parent GObject class
-        super().__init__(gcanvas, name_tag, initial_x, initial_y)
+        super().__init__(initial_x, initial_y, name_tag)
 
+    def add_item(self):
         points = []
         points.extend((self.x, self.y))              # first point in polygon
         points.extend((self.x + 58, self.y + 28))
         points.extend((self.x +  0, self.y + 56))
 
         self.canvas_item = self.canvas.create_polygon(points,
-                                               outline='blue',
-                                               activeoutline='orange',
-                                               fill='white',
-                                               width=2,
-                                               activewidth=5,
-                                               tags=name_tag)
+                                                      outline='blue',
+                                                      activeoutline='orange',
+                                                      fill='white',
+                                                      width=2,
+                                                      activewidth=5,
+                                                      state='hidden',
+                                                      tags=self.tag)
 
         self.canvas.addtag_withtag("scale_on_zoom_2_5", self.canvas_item)
         self.canvas.addtag_withtag(self.tag + "dragable", self.canvas_item)
@@ -179,18 +198,25 @@ class BufferGate(GObject):
 class GRect(GObject):
     ''' Draw rectangle on a canvas '''
 
-    def __init__(self, gcanvas, name_tag, initial_x, initial_y, width, height):
+    def __init__(self, initial_x, initial_y, width, height, name_tag=None):
 
         # Initialize parent GObject class
-        super().__init__(gcanvas, name_tag, initial_x, initial_y)
+        super().__init__(initial_x, initial_y, name_tag)
 
-        self.canvas_item = self.canvas.create_rectangle(self.x, self.y, self.x + width, self.y + height,
-                                               outline='blue',
-                                               activeoutline='orange',
-                                               fill='white',
-                                               width=2,
-                                               activewidth=5,
-                                               tags=name_tag)
+        self.tag = name_tag
+        self.width = width
+        self.height = height
+
+    def add_item(self):
+        self.canvas_item = self.canvas.create_rectangle(self.x, self.y,
+                                                        self.x + self.width, self.y + self.height,
+                                                        outline='blue',
+                                                        activeoutline='orange',
+                                                        fill='white',
+                                                        width=2,
+                                                        activewidth=5,
+                                                        state='hidden',
+                                                        tags=self.tag)
 
         self.canvas.addtag_withtag("scale_on_zoom_2_5", self.canvas_item)
         self.canvas.addtag_withtag(self.tag + "dragable", self.canvas_item)
@@ -216,29 +242,32 @@ class GRect(GObject):
 class GOval(GObject):
     ''' Draw circle on a canvas '''
 
-    def __init__(self, gcanvas, name_tag, initial_x, initial_y, width, height):
+    def __init__(self, initial_x, initial_y, width, height, name_tag=None):
 
         # Initialize parent GObject class
-        super().__init__(gcanvas, name_tag, initial_x, initial_y)
+        super().__init__(initial_x, initial_y, name_tag)
 
-        self.canvas_item = self.canvas.create_oval(self.x, self.y, self.x + width, self.y + height,
-                                                        outline='blue',
-                                                        activeoutline='orange',
-                                                        fill='white',
-                                                        width=2,
-                                                        activewidth=5,
-                                                        tags=name_tag)
+        self.tag = name_tag
+        self.width = width
+        self.height = height
 
-        self.canvas.addtag_withtag("scale_on_zoom_2_5", self.canvas_item)
+    def add_item(self):
+        # Create the canvas item in a hidden state so that we can show it only when we want to
+        self.canvas_item = self.canvas.create_oval(self.x, self.y,
+                                                   self.x + self.width, self.y + self.height,
+                                                   outline='blue',
+                                                   activeoutline='orange',
+                                                   fill='white',
+                                                   width=2,
+                                                   activewidth=5,
+                                                   state='hidden',
+                                                   tags=self.tag)
+
+        # so we can move the item around the canvas
         self.canvas.addtag_withtag(self.tag + "dragable", self.canvas_item)
-
-        # Tag the specific canvas items we want to activate (highlight) together
-        self.canvas.addtag_withtag(self.tag + "activate_together", self.canvas_item)
-
-        # add bindings for highlighting upon <Enter> and <Leave> events
-        self.canvas.tag_bind(self.tag + "activate_together", "<Enter>", self.on_enter)
-        self.canvas.tag_bind(self.tag + "activate_together", "<Leave>", self.on_leave)
 
         # add bindings for selection - must be done for every gate, as this type of binding
         # does not work when inheriting from the parent class
         self.canvas.bind("<<Selection>>", self.on_selection_event, "+")
+
+

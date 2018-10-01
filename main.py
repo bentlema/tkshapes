@@ -23,14 +23,14 @@ gcanvas = GCanvas(root_window, canvas_width=10000, canvas_height=10000)
 gcanvas.pack(fill="both", expand=True)
 gcanvas.register_status_var(status_text)
 
-foo = BufferGate(gcanvas, "Foo", 5100, 5100)
+foo = BufferGate(5100, 5100, name_tag="Foo")
+foo.add_to(gcanvas)
 
-#foo = BufferGate("Foo", 5100, 5100)
-#gcanvas.add(foo)
+bar = GRect(5200, 5200, 100, 200, name_tag="Bar")
+bar.add_to(gcanvas)
 
-bar = GRect(gcanvas, "Bar", 5200, 5200, 100, 200)
-
-cir = GOval(gcanvas, "Cir", 5400, 5200, 100, 100)
+cir = GOval(5400, 5200, 100, 100, name_tag="Cir")
+cir.add_to(gcanvas)
 
 root.mainloop()
 

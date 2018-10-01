@@ -12,6 +12,12 @@ class GCanvas(tk.Frame):
         # Remember the Tk parent window
         self.parent = parent
 
+        # Remember the GObjects that are on this GCanvas
+        # The GCanvas is an abstraction on top of the tkinter Canvas, and GObjects are an abstraction on top of
+        # the canvas' items.  For each GObject created on the GCanvas, there could me one or more items rendered.
+        # Since each GObject has a unique name_tag, we will use a Dictionary keyed off of that to store them
+        self.gobjects = {}
+
         # Where to send status messages
         self.status_var = None
 
@@ -126,6 +132,11 @@ class GCanvas(tk.Frame):
         # Scroll the canvas to the center
         self.canvas.xview_moveto(0.5)
         self.canvas.yview_moveto(0.5)
+
+    def add(self, name_tag, canvas_item):
+        self.gobjects[name_tag] = canvas_item
+        print(f"GCanvas knows about {len(self.gobjects)} GObjects")
+        print(f"     --> GCanvas knows about {self.gobjects}")
 
     # Setup Click-and-Drag to pan the canvas.  Tkinter canvas provides scan_mark() and scan_dragto()
     # to assist in click-and-drag events.  We use these to pan/scroll the canvas.
