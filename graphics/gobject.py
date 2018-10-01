@@ -9,6 +9,9 @@ class GObject:
         self.x = initial_x
         self.y = initial_y
 
+        # Remember my GCanvas
+        self.gcanvas = gcanvas
+
         # Remember the canvas that I'm drawn on
         self.canvas = gcanvas.canvas
 
@@ -77,6 +80,10 @@ class GObject:
         # record the new position
         self._drag_data["x"] = event.x
         self._drag_data["y"] = event.y
+
+        # update status var
+        if self.gcanvas.status_var:
+            self.gcanvas.status_var.set("Dragging something...")
 
     def on_command_button_press(self, event):
         self.toggle_selected()
@@ -172,12 +179,12 @@ class BufferGate(GObject):
 class GRect(GObject):
     ''' Draw rectangle on a canvas '''
 
-    def __init__(self, gcanvas, name_tag, initial_x, initial_y):
+    def __init__(self, gcanvas, name_tag, initial_x, initial_y, width, height):
 
         # Initialize parent GObject class
         super().__init__(gcanvas, name_tag, initial_x, initial_y)
 
-        self.canvas_item = self.canvas.create_rectangle(self.x, self.y, self.x + 100, self.y + 200,
+        self.canvas_item = self.canvas.create_rectangle(self.x, self.y, self.x + width, self.y + height,
                                                outline='blue',
                                                activeoutline='orange',
                                                fill='white',

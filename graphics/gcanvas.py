@@ -12,6 +12,9 @@ class GCanvas(tk.Frame):
         # Remember the Tk parent window
         self.parent = parent
 
+        # Where to send status messages
+        self.status_var = None
+
         # Remember our canvas dimensions (will change when we zoom in/out)
         self.canvas_width = canvas_width
         self.canvas_height = canvas_height
@@ -155,7 +158,7 @@ class GCanvas(tk.Frame):
         sf = 1.0
         w = self.canvas.winfo_width()
         h = self.canvas.winfo_height()
-        # print("canvas size = {}x{}".format(w, h))
+        #print("canvas size = {}x{}".format(w, h))
         (x0, y0, x1, y1) = self.canvas.bbox(self.tag)
         # print("bbox size = {}".format(self.canvas.bbox(self.tag)))
         # print("x0 - x1 = {}".format(x1 - x0))
@@ -169,11 +172,15 @@ class GCanvas(tk.Frame):
         if (event.delta > 0) and ((y1 - y0) <= 50000):
             sf = 1.1  # Just a tad more than 1
             self.canvas.scale("all", cx, cy, sf, sf)
+            if self.status_var:
+                self.status_var.set("Zooming IN")
 
         # Zoom Out
         elif (event.delta < 0) and ((x1 - x0) - 1000 >= w):
             sf = 0.9  # Just a tad less than 1
             self.canvas.scale("all", cx, cy, sf, sf)
+            if self.status_var:
+                self.status_var.set("Zooming OUT")
 
         # Adjust the scroll region based on new canvas background size.  All canvas objects, including
         # the background graph paper, has been scaled up or down, and since it's that background that
@@ -211,6 +218,9 @@ class GCanvas(tk.Frame):
         # Create the selection rectangle
         self.canvas.create_rectangle(x, y, x, y, tags="selection_box")
 
+        if self.status_var:
+            self.status_var.set("Starting selection...")
+
     def on_button_release(self, event):
         # Convert window coordinates into canvas coordinates
         x = self.canvas.canvasx(event.x)
@@ -225,6 +235,9 @@ class GCanvas(tk.Frame):
                                     self._drag_data["end_x"], self._drag_data["end_y"])
         self.canvas.event_generate("<<Selection>>")
 
+        if self.status_var:
+            self.status_var.set("Items selected.")
+
     def on_button_motion(self, event):
         # Convert window coordinates into canvas coordinates
         x = self.canvas.canvasx(event.x)
@@ -232,5 +245,11 @@ class GCanvas(tk.Frame):
         # Handle resize of the rectangular selection box - Delete and re-draw the selection box
         self.canvas.delete("selection_box")
         self.canvas.create_rectangle(self._drag_data["start_x"], self._drag_data["start_y"], x, y, tags="selection_box")
+
+        if self.status_var:
+            self.status_var.set("Dragging Selection Box...")
+
+    def register_status_var(self, var):
+        self.status_var = var
 
 
