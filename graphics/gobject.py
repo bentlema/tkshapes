@@ -15,6 +15,9 @@ class GObject:
         # my primary name tag
         self.tag = name_tag
 
+        # my canvas item - this will get set to something in the sub-class that inherits from me
+        self.canvas_item = None
+
         # this data is used to keep track of a canvas object being dragged
         self._drag_data = {"x": 0, "y": 0, "item": None}
 
@@ -119,6 +122,15 @@ class GObject:
         else:
             self.clear_selected()
 
+    def on_enter(self, event):
+        self.canvas.tag_raise(self.tag)
+        active_outline_width = self.canvas.itemcget("scale_on_zoom_2_5", "activewidth")
+        self.canvas.itemconfigure(self.canvas_item, outline='orange', width=active_outline_width)
+
+    def on_leave(self, event):
+        outline_width = self.canvas.itemcget("scale_on_zoom_2_5", "width")
+        self.canvas.itemconfigure(self.canvas_item, outline='blue', width=outline_width)
+
 
 class BufferGate(GObject):
     """The Buffer Gate draws itself on a canvas"""
@@ -133,7 +145,7 @@ class BufferGate(GObject):
         points.extend((self.x + 58, self.y + 28))
         points.extend((self.x +  0, self.y + 56))
 
-        self.perimeter = self.canvas.create_polygon(points,
+        self.canvas_item = self.canvas.create_polygon(points,
                                                outline='blue',
                                                activeoutline='orange',
                                                fill='white',
@@ -141,11 +153,11 @@ class BufferGate(GObject):
                                                activewidth=5,
                                                tags=name_tag)
 
-        self.canvas.addtag_withtag("scale_on_zoom_2_5", self.perimeter)
-        self.canvas.addtag_withtag(self.tag + "dragable", self.perimeter)
+        self.canvas.addtag_withtag("scale_on_zoom_2_5", self.canvas_item)
+        self.canvas.addtag_withtag(self.tag + "dragable", self.canvas_item)
 
         # Tag the specific canvas items we want to activate (highlight) together
-        self.canvas.addtag_withtag(self.tag + "activate_together", self.perimeter)
+        self.canvas.addtag_withtag(self.tag + "activate_together", self.canvas_item)
 
         # add bindings for highlighting upon <Enter> and <Leave> events
         self.canvas.tag_bind(self.tag + "activate_together", "<Enter>", self.on_enter)
@@ -155,14 +167,6 @@ class BufferGate(GObject):
         # does not work when inheriting from the parent class
         self.canvas.bind("<<Selection>>", self.on_selection_event, "+")
 
-    def on_enter(self, event):
-        self.canvas.tag_raise(self.tag)
-        active_outline_width = self.canvas.itemcget("scale_on_zoom_2_5", "activewidth")
-        self.canvas.itemconfigure(self.perimeter, outline='orange', width=active_outline_width)
-
-    def on_leave(self, event):
-        outline_width = self.canvas.itemcget("scale_on_zoom_2_5", "width")
-        self.canvas.itemconfigure(self.perimeter, outline='blue', width=outline_width)
 
 
 class GRect(GObject):
@@ -173,7 +177,7 @@ class GRect(GObject):
         # Initialize parent GObject class
         super().__init__(gcanvas, name_tag, initial_x, initial_y)
 
-        self.rectangle = self.canvas.create_rectangle(self.x, self.y, self.x + 100, self.y + 200,
+        self.canvas_item = self.canvas.create_rectangle(self.x, self.y, self.x + 100, self.y + 200,
                                                outline='blue',
                                                activeoutline='orange',
                                                fill='white',
@@ -181,11 +185,11 @@ class GRect(GObject):
                                                activewidth=5,
                                                tags=name_tag)
 
-        self.canvas.addtag_withtag("scale_on_zoom_2_5", self.rectangle)
-        self.canvas.addtag_withtag(self.tag + "dragable", self.rectangle)
+        self.canvas.addtag_withtag("scale_on_zoom_2_5", self.canvas_item)
+        self.canvas.addtag_withtag(self.tag + "dragable", self.canvas_item)
 
         # Tag the specific canvas items we want to activate (highlight) together
-        self.canvas.addtag_withtag(self.tag + "activate_together", self.rectangle)
+        self.canvas.addtag_withtag(self.tag + "activate_together", self.canvas_item)
 
         # add bindings for highlighting upon <Enter> and <Leave> events
         self.canvas.tag_bind(self.tag + "activate_together", "<Enter>", self.on_enter)
@@ -195,17 +199,7 @@ class GRect(GObject):
         # does not work when inheriting from the parent class
         self.canvas.bind("<<Selection>>", self.on_selection_event, "+")
 
-    # TODO: Rather than implementing on_enter and on_leave for every sub-class of GObject, could we
-    # TODO: make a way to register them....
 
-    def on_enter(self, event):
-        self.canvas.tag_raise(self.tag)
-        active_outline_width = self.canvas.itemcget("scale_on_zoom_2_5", "activewidth")
-        self.canvas.itemconfigure(self.rectangle, outline='orange', width=active_outline_width)
-
-    def on_leave(self, event):
-        outline_width = self.canvas.itemcget("scale_on_zoom_2_5", "width")
-        self.canvas.itemconfigure(self.rectangle, outline='blue', width=outline_width)
 
 
 
