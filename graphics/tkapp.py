@@ -29,10 +29,10 @@ class AppRootWindow(tk.Frame):
         self.root.minsize(320, 240)
 
         # Debugging
-        print("                 Max size: {}x{}".format(self.window_max_width, self.window_max_height))
-        print("Current window dimentions: {}x{}".format(self.root.winfo_width(), self.root.winfo_height()))
-        print("        Screen dimentions: {}x{}".format(self.root.winfo_screenwidth(), self.root.winfo_screenheight()))
-        print("--------------------------------------------------------------------------------")
+        #print("                 Max size: {}x{}".format(self.window_max_width, self.window_max_height))
+        #print("Current window dimentions: {}x{}".format(self.root.winfo_width(), self.root.winfo_height()))
+        #print("        Screen dimentions: {}x{}".format(self.root.winfo_screenwidth(), self.root.winfo_screenheight()))
+        #print("--------------------------------------------------------------------------------")
 
         # Set default window transparency
         self.root.attributes("-alpha", 0.85)
@@ -73,9 +73,11 @@ class AppRootWindow(tk.Frame):
         # TODO: decisions about the max window size.
         if self.multi_display:
             if event.x > self.screen_width or event.x < 0:
-                print("We are probably on the SECONDARY display")
+                #print("We are probably on the SECONDARY display")
+                pass
             else:
-                print("We are probably on the PRIMARY display")
+                #print("We are probably on the PRIMARY display")
+                pass
 
         #print("                 Max size: {}".format(self.root.maxsize()))
         #print("        Screen dimentions: {}x{}".format(self.root.winfo_screenwidth(), self.root.winfo_screenheight()))

@@ -28,14 +28,33 @@ class GObject:
         # my selection status (am I selected or not)
         self.selected = False
 
+        # all fillable canvas items will use these colors
+        self.fill_color = 'white'
+        self.selected_fill_color = '#1111FF'
+
+        # current line width and active line width (changes when zooming in/out to maintain proper ratio)
+        self.outline_width = 2
+        self.outline_color = 'blue'
+        self.active_outline_width = 10
+        self.active_outline_color = 'orange'
+
+        # TODO: setup a property 'highlightable' which will control if the GObject's outline is highlighted
+        # TODO: when the mouse pointer enters.  Other properties we should add include:
+        # TODO: 'draggable', 'selectable', 'clickable', 'connectable', etc.
+
     # Tell the GObject what GCanvas to draw itself on
     def add_to(self, gcanvas):
         self.gcanvas = gcanvas
         self.canvas = gcanvas.canvas
-        self.add_item()  # Add the item to the canvas
-        self.gcanvas.add(self.tag, self.canvas_item)  # Let the GCanvas know we exist
-        self.show_item() # GObjects are hidden by default
+        self.add()  # Now that we know what GCanvas to use, add the GObject's canvas item(s) to the canvas
+        self.gcanvas.add(self.tag, self)  # Let the GCanvas know we exist
+        self.show() # GObjects are hidden by default
         self.add_mouse_bindings()
+
+    # scaling a GObject will involve scaling the canvas items, as well as adjusting line/active line widths
+    def scale(self, sf):
+        ''' scale by scale factor sf '''
+        pass
 
     def add_mouse_bindings(self):
         # add bindings for selection toggle on/off using Command-Click
@@ -45,6 +64,13 @@ class GObject:
         self.canvas.tag_bind(self.tag + "dragable", "<ButtonPress-1>", self.on_button_press)
         self.canvas.tag_bind(self.tag + "dragable", "<ButtonRelease-1>", self.on_button_release)
         self.canvas.tag_bind(self.tag + "dragable", "<B1-Motion>", self.on_button_motion)
+
+        # add bindings for highlighting upon <Enter> and <Leave> events
+        self.canvas.tag_bind(self.tag + "activate_together", "<Enter>", self.on_enter)
+        self.canvas.tag_bind(self.tag + "activate_together", "<Leave>", self.on_leave)
+
+        # add binding to handle Selection virtual events from a selection box
+        self.canvas.bind("<<Selection>>", self.on_selection_event, "+")
 
     def on_button_press(self, event):
         ''' Beginning drag of an object - record the item and its location '''
@@ -107,12 +133,12 @@ class GObject:
 
     def set_selected(self):
         self.selected = True
-        self.canvas.itemconfigure(self.tag + "dragable", fill='#1111FF') # Bright Blue
+        self.canvas.itemconfigure(self.tag + "dragable", fill=self.selected_fill_color)
         self.canvas.addtag_withtag("selected", self.tag)
 
     def clear_selected(self):
         self.selected = False
-        self.canvas.itemconfigure(self.tag + "dragable", fill='white')
+        self.canvas.itemconfigure(self.tag + "dragable", fill=self.fill_color)
         self.canvas.dtag(self.tag, "selected") # delete/remove the "selected" tag
 
     def toggle_selected(self):
@@ -142,61 +168,52 @@ class GObject:
 
     def on_enter(self, event):
         self.canvas.tag_raise(self.tag)
-        active_outline_width = self.canvas.itemcget("scale_on_zoom_2_5", "activewidth")
-        self.canvas.itemconfigure(self.canvas_item, outline='orange', width=active_outline_width)
+        #active_outline_width = self.canvas.itemcget("scale_on_zoom_2_5", "activewidth")
+        self.canvas.itemconfigure(self.canvas_item, outline=self.active_outline_color, width=self.active_outline_width)
 
     def on_leave(self, event):
-        outline_width = self.canvas.itemcget("scale_on_zoom_2_5", "width")
-        self.canvas.itemconfigure(self.canvas_item, outline='blue', width=outline_width)
+        #outline_width = self.canvas.itemcget("scale_on_zoom_2_5", "width")
+        self.canvas.itemconfigure(self.canvas_item, outline=self.outline_color, width=self.outline_width)
 
-    def hide_item(self):
+    def hide(self):
         self.canvas.itemconfigure(self.canvas_item, state="hidden")
 
-    def show_item(self):
+    def show(self):
         self.canvas.itemconfigure(self.canvas_item, state="normal")
 
 
 class BufferGate(GObject):
-    """The Buffer Gate draws itself on a canvas"""
+    ''' The Buffer Gate draws itself on a GCanvas '''
 
     def __init__(self, initial_x, initial_y, name_tag=None):
 
         # Initialize parent GObject class
         super().__init__(initial_x, initial_y, name_tag)
 
-    def add_item(self):
+    def add(self):
         points = []
         points.extend((self.x, self.y))              # first point in polygon
         points.extend((self.x + 58, self.y + 28))
         points.extend((self.x +  0, self.y + 56))
 
         self.canvas_item = self.canvas.create_polygon(points,
-                                                      outline='blue',
-                                                      activeoutline='orange',
-                                                      fill='white',
-                                                      width=2,
-                                                      activewidth=5,
+                                                      outline=self.outline_color,
+                                                      activeoutline=self.active_outline_color,
+                                                      fill=self.fill_color,
+                                                      width=self.outline_width,
+                                                      activewidth=self.active_outline_width,
                                                       state='hidden',
                                                       tags=self.tag)
 
-        self.canvas.addtag_withtag("scale_on_zoom_2_5", self.canvas_item)
+        # Tag the canvas items as "dragable" so that we can drag them around the canvas
         self.canvas.addtag_withtag(self.tag + "dragable", self.canvas_item)
 
         # Tag the specific canvas items we want to activate (highlight) together
         self.canvas.addtag_withtag(self.tag + "activate_together", self.canvas_item)
-
-        # add bindings for highlighting upon <Enter> and <Leave> events
-        self.canvas.tag_bind(self.tag + "activate_together", "<Enter>", self.on_enter)
-        self.canvas.tag_bind(self.tag + "activate_together", "<Leave>", self.on_leave)
-
-        # add bindings for selection - must be done for every gate, as this type of binding
-        # does not work when inheriting from the parent class
-        self.canvas.bind("<<Selection>>", self.on_selection_event, "+")
-
 
 
 class GRect(GObject):
-    ''' Draw rectangle on a canvas '''
+    ''' Draw Square or Rectangle on a GCanvas '''
 
     def __init__(self, initial_x, initial_y, width, height, name_tag=None):
 
@@ -207,40 +224,26 @@ class GRect(GObject):
         self.width = width
         self.height = height
 
-    def add_item(self):
+    def add(self):
         self.canvas_item = self.canvas.create_rectangle(self.x, self.y,
                                                         self.x + self.width, self.y + self.height,
-                                                        outline='blue',
-                                                        activeoutline='orange',
-                                                        fill='white',
-                                                        width=2,
-                                                        activewidth=5,
+                                                        outline=self.outline_color,
+                                                        activeoutline=self.active_outline_color,
+                                                        fill=self.fill_color,
+                                                        width=self.outline_width,
+                                                        activewidth=self.active_outline_width,
                                                         state='hidden',
                                                         tags=self.tag)
 
-        self.canvas.addtag_withtag("scale_on_zoom_2_5", self.canvas_item)
+        # Tag the canvas items as "dragable" so that we can drag them around the canvas
         self.canvas.addtag_withtag(self.tag + "dragable", self.canvas_item)
 
         # Tag the specific canvas items we want to activate (highlight) together
         self.canvas.addtag_withtag(self.tag + "activate_together", self.canvas_item)
 
-        # add bindings for highlighting upon <Enter> and <Leave> events
-        self.canvas.tag_bind(self.tag + "activate_together", "<Enter>", self.on_enter)
-        self.canvas.tag_bind(self.tag + "activate_together", "<Leave>", self.on_leave)
-
-        # add bindings for selection - must be done for every gate, as this type of binding
-        # does not work when inheriting from the parent class
-        self.canvas.bind("<<Selection>>", self.on_selection_event, "+")
-
-
-
-
-
-
-
 
 class GOval(GObject):
-    ''' Draw circle on a canvas '''
+    ''' Draw Oval or Circle on a GCanvas '''
 
     def __init__(self, initial_x, initial_y, width, height, name_tag=None):
 
@@ -251,23 +254,21 @@ class GOval(GObject):
         self.width = width
         self.height = height
 
-    def add_item(self):
+    def add(self):
         # Create the canvas item in a hidden state so that we can show it only when we want to
         self.canvas_item = self.canvas.create_oval(self.x, self.y,
                                                    self.x + self.width, self.y + self.height,
-                                                   outline='blue',
-                                                   activeoutline='orange',
-                                                   fill='white',
-                                                   width=2,
-                                                   activewidth=5,
+                                                   outline=self.outline_color,
+                                                   activeoutline=self.active_outline_color,
+                                                   fill=self.fill_color,
+                                                   width=self.outline_width,
+                                                   activewidth=self.active_outline_width,
                                                    state='hidden',
                                                    tags=self.tag)
 
         # so we can move the item around the canvas
         self.canvas.addtag_withtag(self.tag + "dragable", self.canvas_item)
 
-        # add bindings for selection - must be done for every gate, as this type of binding
-        # does not work when inheriting from the parent class
-        self.canvas.bind("<<Selection>>", self.on_selection_event, "+")
-
+        # Tag the specific canvas items we want to activate (highlight) together
+        self.canvas.addtag_withtag(self.tag + "activate_together", self.canvas_item)
 

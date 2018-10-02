@@ -9,7 +9,7 @@ class GCanvas(tk.Frame):
         # Initialize parent class
         tk.Frame.__init__(self, parent)
 
-        # Remember the Tk parent window
+        # Remember my Tk parent window/frame
         self.parent = parent
 
         # Remember the GObjects that are on this GCanvas
@@ -133,8 +133,8 @@ class GCanvas(tk.Frame):
         self.canvas.xview_moveto(0.5)
         self.canvas.yview_moveto(0.5)
 
-    def add(self, name_tag, canvas_item):
-        self.gobjects[name_tag] = canvas_item
+    def add(self, name_tag, gobject):
+        self.gobjects[name_tag] = gobject
         print(f"GCanvas knows about {len(self.gobjects)} GObjects")
         print(f"     --> GCanvas knows about {self.gobjects}")
 
