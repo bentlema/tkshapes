@@ -307,12 +307,8 @@ class GGraphPaper(GObject):
         self.bg_color = "#eeffee"
 
     def add(self):
-        # Create the canvas items in a hidden state so that we can show it only when we want to
-        # Draw and tag a background rectangle which will give us the ability to scroll the canvas only when
-        # clicking and dragging on the background, but will not drag when we click on another object on the
-        # canvas (such as a gate or wire) as those objects will be tagged with different names. We bind the
-        # tag of the background objects to the click/drag events.  See below scroll_start() and scroll_move()
-
+        # Create the canvas items in a hidden state so that we can show them only when we want to
+        # Draw the Graph Paper background rectangle using a greenish-white tint
         self.canvas_item = self.canvas.create_rectangle(self.x, self.y,
                                                         self.x + self.width,
                                                         self.y + self.height,
@@ -321,7 +317,7 @@ class GGraphPaper(GObject):
                                                         state='hidden',
                                                         tag=self.tag)
 
-        # Draw the Graph Paper background.  We draw all of the vertical lines, followed by all of the
+        # Draw the Graph Paper lines.  We draw all of the vertical lines, followed by all of the
         # horizontal lines.  Every 100 pixels (or every 10th line) we draw using a DARKER green, to
         # simulate the classic "Engineer's Graph Paper".
 
@@ -341,4 +337,8 @@ class GGraphPaper(GObject):
                 line_color = "#ccffcc"
             self.canvas.create_line([(self.y, i), (self.y + self.width, i)], fill=line_color, tag=self.tag)
 
-
+        # TODO:  Note, we do not have the "activate_together" tag here, as is used on other GObjects. This
+        # TODO:  is a temporary hack, as we use this GraphPaper as the background, and do not want the
+        # TODO:  on_enter and on_leave events to apply.  We should create a method that allows us to
+        # TODO:  make_highlightable() on any GObject, and then we can choose NOT to for this GObject.
+        # TODO:  Or, better yet, we should make it a property that we can set to True or False.
