@@ -73,11 +73,11 @@ class AppRootWindow(tk.Frame):
         # TODO: decisions about the max window size.
         if self.multi_display:
             if event.x > self.screen_width or event.x < 0:
-                #print("We are probably on the SECONDARY display")
-                pass
+                if self.status_var:
+                    self.status_var.set("We are probably on the SECONDARY display")
             else:
-                #print("We are probably on the PRIMARY display")
-                pass
+                if self.status_var:
+                    self.status_var.set("We are probably on the PRIMARY display")
 
         #print("                 Max size: {}".format(self.root.maxsize()))
         #print("        Screen dimentions: {}x{}".format(self.root.winfo_screenwidth(), self.root.winfo_screenheight()))
@@ -123,3 +123,5 @@ class AppRootWindow(tk.Frame):
         geometry = "{}x{}+{}+{}".format(self.window_width, self.window_height, self.window_loc_x, self.window_loc_y)
         self.root.geometry(geometry)
 
+    def register_status_var(self, var):
+        self.status_var = var

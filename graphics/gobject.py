@@ -20,6 +20,9 @@ class GObject:
         self.tag = name_tag
 
         # my canvas item - this will get set to something in the sub-class that inherits from me
+        # TODO: This really needs to be made into a list of canvas items, as some of our GObjects
+        # TODO: contain multiple items, and we have no way of hiding/showing them if we dont keep
+        # TODO: track of all of them.  (Take a look at GGraphPaper below.)
         self.canvas_item = None
 
         # this data is used to keep track of a canvas object being dragged
@@ -35,7 +38,7 @@ class GObject:
         # current line width and active line width (changes when zooming in/out to maintain proper ratio)
         self.outline_width = 2
         self.outline_color = 'blue'
-        self.active_outline_width = 10
+        self.active_outline_width = 5
         self.active_outline_color = 'orange'
 
         # TODO: setup a property 'highlightable' which will control if the GObject's outline is highlighted
@@ -54,7 +57,22 @@ class GObject:
     # scaling a GObject will involve scaling the canvas items, as well as adjusting line/active line widths
     def scale(self, sf):
         ''' scale by scale factor sf '''
-        pass
+
+        # We should also scale the GObjects themselves (here), but currently we are using a feature
+        # of the canvas to scale all items simultaneously within the GCanvas class to simulate Zooming.
+        # We need to consider how outline and active_outline widths would/should be scaled when we are
+        # both Zooming and scaling an individual GObject at the same time.
+
+        # Scale my outline and active_outline widths
+        current_width = self.outline_width
+        current_activewidth = self.active_outline_width
+        new_width = float(current_width) * sf
+        new_activewidth = float(current_activewidth) * sf
+        self.canvas.itemconfigure(self.tag, width=new_width)
+        self.canvas.itemconfigure(self.tag, activewidth=new_activewidth)
+        self.outline_width = new_width
+        self.active_outline_width = new_activewidth
+        #print(f"{sf} {self.tag} new width {new_width} new active width {new_activewidth}")
 
     def add_mouse_bindings(self):
         # add bindings for selection toggle on/off using Command-Click
@@ -124,7 +142,7 @@ class GObject:
 
     def on_command_button_press(self, event):
         self.toggle_selected()
-        print("Command-Click, Selected? {}".format(self.selected))
+        #print("Command-Click, Selected? {}".format(self.selected))
         clicked_item = self.canvas.find_closest(event.x, event.y)[0]
         if (self.selected):
             self.set_selected()
@@ -145,13 +163,13 @@ class GObject:
         self.selected = not self.selected
 
     def on_selection_event(self, event):
-        print("Selection event triggered {}".format(self.tag))
+        #print("Selection event triggered {}".format(self.tag))
         self.update_selection_status()
 
     def update_selection_status(self):
         # If any part of me is "selected", then make sure all items are selected so that they move together
         selected = False
-        print("My primary tag: {}".format(self.tag))
+        #print("My primary tag: {}".format(self.tag))
         # Find all item IDs that are tagged with primary name tag
         ids = self.canvas.find_withtag(self.tag)
         # Check to see if at least one has the "selected" tag
@@ -181,6 +199,16 @@ class GObject:
     def show(self):
         self.canvas.itemconfigure(self.canvas_item, state="normal")
 
+    def make_draggable(self):
+        # Tag the canvas items as "dragable" so that we can drag them around the canvas
+        self.canvas.addtag_withtag(self.tag + "dragable", self.canvas_item)
+
+    def set_outline_width(self, width):
+        self.outline_width = width
+
+    def set_active_outline_width(self, width):
+        self.active_outline_width = width
+
 
 class BufferGate(GObject):
     ''' The Buffer Gate draws itself on a GCanvas '''
@@ -204,9 +232,6 @@ class BufferGate(GObject):
                                                       activewidth=self.active_outline_width,
                                                       state='hidden',
                                                       tags=self.tag)
-
-        # Tag the canvas items as "dragable" so that we can drag them around the canvas
-        self.canvas.addtag_withtag(self.tag + "dragable", self.canvas_item)
 
         # Tag the specific canvas items we want to activate (highlight) together
         self.canvas.addtag_withtag(self.tag + "activate_together", self.canvas_item)
@@ -234,9 +259,6 @@ class GRect(GObject):
                                                         activewidth=self.active_outline_width,
                                                         state='hidden',
                                                         tags=self.tag)
-
-        # Tag the canvas items as "dragable" so that we can drag them around the canvas
-        self.canvas.addtag_withtag(self.tag + "dragable", self.canvas_item)
 
         # Tag the specific canvas items we want to activate (highlight) together
         self.canvas.addtag_withtag(self.tag + "activate_together", self.canvas_item)
@@ -266,9 +288,57 @@ class GOval(GObject):
                                                    state='hidden',
                                                    tags=self.tag)
 
-        # so we can move the item around the canvas
-        self.canvas.addtag_withtag(self.tag + "dragable", self.canvas_item)
-
         # Tag the specific canvas items we want to activate (highlight) together
         self.canvas.addtag_withtag(self.tag + "activate_together", self.canvas_item)
+
+
+
+class GGraphPaper(GObject):
+    ''' Draw Graph Paper '''
+
+    def __init__(self, initial_x, initial_y, width, height, name_tag=None):
+
+        # Initialize parent GObject class
+        super().__init__(initial_x, initial_y, name_tag)
+
+        self.tag = name_tag
+        self.width = width
+        self.height = height
+        self.bg_color = "#eeffee"
+
+    def add(self):
+        # Create the canvas items in a hidden state so that we can show it only when we want to
+        # Draw and tag a background rectangle which will give us the ability to scroll the canvas only when
+        # clicking and dragging on the background, but will not drag when we click on another object on the
+        # canvas (such as a gate or wire) as those objects will be tagged with different names. We bind the
+        # tag of the background objects to the click/drag events.  See below scroll_start() and scroll_move()
+
+        self.canvas_item = self.canvas.create_rectangle(self.x, self.y,
+                                                        self.x + self.width,
+                                                        self.y + self.height,
+                                                        fill=self.bg_color,
+                                                        outline=self.bg_color,
+                                                        state='hidden',
+                                                        tag=self.tag)
+
+        # Draw the Graph Paper background.  We draw all of the vertical lines, followed by all of the
+        # horizontal lines.  Every 100 pixels (or every 10th line) we draw using a DARKER green, to
+        # simulate the classic "Engineer's Graph Paper".
+
+        # Creates all vertical lines
+        for i in range(self.x, self.x + self.width, 10):
+            if (i % 100) == 0:
+                line_color = "#aaffaa"
+            else:
+                line_color = "#ccffcc"
+            self.canvas.create_line([(i, self.x), (i, self.x + self.height)], fill=line_color, tag=self.tag)
+
+        # Creates all horizontal lines
+        for i in range(self.y, self.y + self.height, 10):
+            if (i % 100) == 0:
+                line_color = "#aaffaa"
+            else:
+                line_color = "#ccffcc"
+            self.canvas.create_line([(self.y, i), (self.y + self.width, i)], fill=line_color, tag=self.tag)
+
 

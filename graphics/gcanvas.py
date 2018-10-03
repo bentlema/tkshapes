@@ -34,52 +34,12 @@ class GCanvas(tk.Frame):
         # canvas (such as a gate or wire) as those objects will be tagged with different names. We bind the
         # tag of the background objects to the click/drag events.  See below scroll_start() and scroll_move()
 
-        self.tag = "graph_paper"
-        self.bg_color = "#eeffee"
+        self.tag = "background"
+        self.bg_color = "#ff0000"
         self.canvas.create_rectangle(0, 0, self.canvas_width, self.canvas_height,
                                      fill=self.bg_color, outline=self.bg_color, tag=self.tag)
 
-        # TODO: Draw a dot off the screen that we will use to keep track of a width and activewidth, which
-        # TODO: we will use on all other canvas objects as well.  Actually, we should probably just use
-        # TODO: a pair of instance variables, but want to try this first. Actually, NO, we should start to
-        # TODO: keep track of the GObjects on the GCanvas in a Dictionary, with the key being the name tag
-        # TODO: given when the GObject is created.  Will come back to this...
-
-        self.canvas.create_oval(-100, -100, -100, -100, width=1, activewidth=0, tag="scale_on_zoom_1_0")
-        self.canvas.create_oval(-100, -100, -100, -100, width=2, activewidth=2, tag="scale_on_zoom_2_2")
-        self.canvas.create_oval(-100, -100, -100, -100, width=5, activewidth=5, tag="scale_on_zoom_5_5")
-        self.canvas.create_oval(-100, -100, -100, -100, width=7, activewidth=7, tag="scale_on_zoom_7_7")
-        self.canvas.create_oval(-100, -100, -100, -100, width=9, activewidth=9, tag="scale_on_zoom_9_9")
-        self.canvas.create_oval(-100, -100, -100, -100, width=2, activewidth=5, tag="scale_on_zoom_2_5")
-
-        # Draw the Graph Paper background.  We draw all of the vertical lines, followed by all of the
-        # horizontal lines.  Every 100 pixels (or every 10th line) we draw using a DARKER green, to
-        # simulate the classic "Engineer's Graph Paper".  We draw the lines to cover the entire canvas,
-        # even those portions that are out of view, as we want to be able to scroll across the entire
-        # canvas, and never see any uncovered areas.
-
-        # Creates all vertical lines
-        for i in range(0, self.canvas_width, 10):
-            if (i % 100) == 0:
-                line_color = "#aaffaa"
-            else:
-                line_color = "#ccffcc"
-            self.canvas.create_line([(i, 0), (i, self.canvas_height)], fill=line_color, tag=self.tag)
-
-        # Creates all horizontal lines
-        for i in range(0, self.canvas_height, 10):
-            if (i % 100) == 0:
-                line_color = "#aaffaa"
-            else:
-                line_color = "#ccffcc"
-            self.canvas.create_line([(0, i), (self.canvas_width, i)], fill=line_color, tag=self.tag)
-
-        # Tag all graph_paper canvas objects with scale_on_zoom_1_0 as all lines start out with
-        # a width of 1 and we never use activewidth, so active width is 0
-        self.canvas.addtag_withtag("scale_on_zoom_1_0", "graph_paper")
-
-        # Ensure that all canvas objects tagged as 'graph_paper' are pushed down to the lowest layer,
-        # as all subsequently-created objects will be draggable across the top of the canvas
+        # Ensure the background rectangle is lowered to the lowest possible layer in the stacking order
         self.canvas.tag_lower(self.tag)
 
         # Create the scrollbars and associate one with the canvas
@@ -183,37 +143,29 @@ class GCanvas(tk.Frame):
         if (event.delta > 0) and ((y1 - y0) <= 50000):
             sf = 1.1  # Just a tad more than 1
             self.canvas.scale("all", cx, cy, sf, sf)
-            if self.status_var:
-                self.status_var.set("Zooming IN")
 
         # Zoom Out
         elif (event.delta < 0) and ((x1 - x0) - 1000 >= w):
             sf = 0.9  # Just a tad less than 1
             self.canvas.scale("all", cx, cy, sf, sf)
-            if self.status_var:
-                self.status_var.set("Zooming OUT")
 
         # Adjust the scroll region based on new canvas background size.  All canvas objects, including
-        # the background graph paper, has been scaled up or down, and since it's that background that
+        # the background, have been scaled up or down, and since it's that background that
         # determines our scroll region, we have to adjust it every time we zoom in or out.
         self.canvas.configure(scrollregion=self.canvas.bbox(self.tag))
 
-        # Scale the line width and active width on all canvas items too
-        # For items with initial line width 1, and active width 0, they should be tagged scale_on_zoom_1_0
-        # For items with initial line width 2, and active width 5, they should be tagged scale_on_zoom_2_5
-
-        for tag in ("scale_on_zoom_1_0",
-                    "scale_on_zoom_2_2",
-                    "scale_on_zoom_5_5",
-                    "scale_on_zoom_7_7",
-                    "scale_on_zoom_9_9",
-                    "scale_on_zoom_2_5"):
-            current_width = self.canvas.itemcget(tag, "width")
-            current_activewidth = self.canvas.itemcget(tag, "activewidth")
-            new_width = float(current_width) * sf
-            new_activewidth = float(current_activewidth) * sf
-            self.canvas.itemconfigure(tag, width=new_width)
-            self.canvas.itemconfigure(tag, activewidth=new_activewidth)
+        # Scale the outline width and active outline width on all canvas items too so they appear to change size
+        # at the same rate as the shapes they are depicting.  For example, as we Zoom OUT, a Circle scales IN, the
+        # width of the line drawn to show the circle on the canvas also gets thiner.  If we Zoom IN, the line drawn
+        # would be rendered thicker.  This complets the illusion that we are Zooming IN/OUT even though we are just
+        # scaling up or scaling down the size of objects.
+        #
+        # for each GObject, call the scale method to scale both the object itself, and its outline, and
+        # active outline values.  We can scale all items on the canvas as above (all at the same time) but this
+        # is only useful for Zooming IN/OUT.  GObjects should also know how to scale themselves, in case our
+        # application wants to be able to re-size an individual GObject.
+        for gobject in self.gobjects.values():
+            gobject.scale(sf)
 
     def on_button_press(self, event):
         # Clear any current selection first
