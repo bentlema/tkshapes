@@ -45,6 +45,12 @@ class GObject:
         # TODO: when the mouse pointer enters.  Other properties we should add include:
         # TODO: 'draggable', 'selectable', 'clickable', 'connectable', etc.
 
+        self._selectable = True       # if the GObject can be selected or not
+        self._highlightable = True    # if we highlight the GObject upon <Enter> / de-highlight upon <Leave>
+        self._draggable = True        # if the GObject can be click-hold-Dragged
+        self._clickable = True        # if the GObject can be clicked
+        self._connectable = False     # if the GObject can be connected to another GObject
+
     # Tell the GObject what GCanvas to draw itself on
     def add_to(self, gcanvas):
         self.gcanvas = gcanvas
@@ -69,9 +75,13 @@ class GObject:
         new_width = float(current_width) * sf
         new_activewidth = float(current_activewidth) * sf
         self.canvas.itemconfigure(self.tag, width=new_width)
-        self.canvas.itemconfigure(self.tag, activewidth=new_activewidth)
         self.outline_width = new_width
-        self.active_outline_width = new_activewidth
+
+        # We adjust activewidth / active_outline_width ONLY if the GObject is highlightable
+        if self.highlightable:
+            self.canvas.itemconfigure(self.tag, activewidth=new_activewidth)
+            self.active_outline_width = new_activewidth
+
         #print(f"{sf} {self.tag} new width {new_width} new active width {new_activewidth}")
 
     def add_mouse_bindings(self):
@@ -141,26 +151,39 @@ class GObject:
             self.gcanvas.status_var.set("Dragging something...")
 
     def on_command_button_press(self, event):
-        self.toggle_selected()
-        #print("Command-Click, Selected? {}".format(self.selected))
-        clicked_item = self.canvas.find_closest(event.x, event.y)[0]
-        if (self.selected):
-            self.set_selected()
+        ''' handle Command-Click on a GObject '''
+
+        # convert from screen coords to canvas coords
+        canvas = event.widget
+        x = canvas.canvasx(event.x)
+        y = canvas.canvasy(event.y)
+        clicked_item = self.canvas.find_closest(x, y)[0]
+
+        if self.selectable:
+            self.toggle_selected()
+            print("Item ID {} --> Command-Clicked --> Selected? {}".format(clicked_item, self.selected))
+            if (self.selected):
+                self.set_selected()
+            else:
+                self.clear_selected()
         else:
-            self.clear_selected()
+            print("Item {} not selectable.".format(clicked_item))
 
     def set_selected(self):
-        self.selected = True
-        self.canvas.itemconfigure(self.tag + "dragable", fill=self.selected_fill_color)
-        self.canvas.addtag_withtag("selected", self.tag)
+        if self.selectable:
+            self.selected = True
+            self.canvas.itemconfigure(self.tag + "dragable", fill=self.selected_fill_color)
+            self.canvas.addtag_withtag("selected", self.tag)  # add "selected" tag to item
 
     def clear_selected(self):
-        self.selected = False
-        self.canvas.itemconfigure(self.tag + "dragable", fill=self.fill_color)
-        self.canvas.dtag(self.tag, "selected") # delete/remove the "selected" tag
+        if self.selectable:
+            self.selected = False
+            self.canvas.itemconfigure(self.tag + "dragable", fill=self.fill_color)
+            self.canvas.dtag(self.tag, "selected") # delete/remove the "selected" tag
 
     def toggle_selected(self):
-        self.selected = not self.selected
+        if self.selectable:
+            self.selected = not self.selected
 
     def on_selection_event(self, event):
         #print("Selection event triggered {}".format(self.tag))
@@ -209,9 +232,60 @@ class GObject:
     def set_active_outline_width(self, width):
         self.active_outline_width = width
 
+    @property
+    def selectable(self):
+        return self._selectable
 
-class BufferGate(GObject):
-    ''' The Buffer Gate draws itself on a GCanvas '''
+    @selectable.setter
+    def selectable(self, value):
+        self._selectable = bool(value)
+
+    @property
+    def highlightable(self):
+        return self._highlightable
+
+    @highlightable.setter
+    def highlightable(self, value):
+        self._highlightable = bool(value)
+
+#
+# TODO: we need to make properties for each GObject
+# TODO:  - selectable
+# TODO:  - draggable
+# TODO:  - highlightable
+# TODO:
+# TODO: as you can see, the GLine doesn't quite fit in to the existing model where objects are all selectable, etc.
+class GLine(GObject):
+    ''' Basic straight line draws itself on a GCanvas '''
+
+    def __init__(self, initial_x, initial_y, length, name_tag=None):
+
+        # Initialize parent GObject class
+        super().__init__(initial_x, initial_y, name_tag)
+
+        # we do not want our line to be selectable or highlightable
+        self.selectable = False
+        self.highlightable = False
+
+        # attributes unique to the GLine
+        self.length = length
+        self.angle = 0
+        self.coords = [ (self.x, self.y), (self.x + self.length, self.y)]
+
+    def add(self):
+        self.canvas_item = self.canvas.create_line(self.coords,
+                                                   fill=self.outline_color,
+                                                   width=self.outline_width,
+                                                   activewidth=self.outline_width,
+                                                   state='hidden',
+                                                   tags=self.tag)
+
+        # Tag the specific canvas items we want to activate (highlight) together
+        #self.canvas.addtag_withtag(self.tag + "activate_together", self.canvas_item)
+
+
+class GBufferGate(GObject):
+    ''' The Triangle draws itself on a GCanvas '''
 
     def __init__(self, initial_x, initial_y, name_tag=None):
 

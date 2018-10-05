@@ -3,7 +3,15 @@
 import tkinter as tk
 import tkinter.ttk as ttk
 
-from graphics import AppRootWindow, GCanvas, BufferGate, GRect, GOval, GGraphPaper
+from graphics import (
+    AppRootWindow,
+    GCanvas,
+    GGraphPaper,
+    GLine,
+    GRect,
+    GOval,
+    GBufferGate
+)
 
 root = tk.Tk()
 
@@ -24,6 +32,7 @@ gcanvas = GCanvas(root_window, canvas_width=10000, canvas_height=10000)
 gcanvas.pack(fill="both", expand=True)
 gcanvas.register_status_var(status_text)
 
+# Using the 'background' name_tag will associate this GObject with the immovable background items
 # TODO: using the 'background' tag requires special knowledge about the implementation of the GCanvas, so I
 # TODO: do not like that, but will come back to this later, and make a method that registers a GObject as
 # TODO: a background component...
@@ -32,7 +41,7 @@ graph_paper.set_outline_width(2)
 graph_paper.set_active_outline_width(0)
 graph_paper.add_to(gcanvas)
 
-foo = BufferGate(5100, 5100, name_tag="Foo")
+foo = GBufferGate(5100, 5100, name_tag="Foo")
 foo.add_to(gcanvas)
 foo.make_draggable()
 
@@ -43,6 +52,10 @@ bar.make_draggable()
 cir = GOval(5400, 5200, 100, 100, name_tag="Cir")
 cir.add_to(gcanvas)
 cir.make_draggable()
+
+line = GLine(5400, 5400, 10, name_tag="Line")
+line.add_to(gcanvas)
+line.make_draggable()
 
 root.mainloop()
 
