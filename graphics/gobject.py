@@ -134,6 +134,7 @@ class GObject:
         # Are we moving an item that is NOT selected?  If so, just move it.
         # Or Are we moving an item that IS selected? If so, then move all selected items along with it
         items_im_composed_of = self.canvas.find_withtag(self.tag)
+        #print("DEBUG: self.tag={} items_im_composed_of={}".format(self.tag, items_im_composed_of))
         tags_on_1st_item = self.canvas.gettags(items_im_composed_of[0]) # just look at the 1st item
 
         # Since all items will have the "selected" tag, we only need to check the 1st one
@@ -209,11 +210,9 @@ class GObject:
 
     def on_enter(self, event):
         self.canvas.tag_raise(self.tag)
-        #active_outline_width = self.canvas.itemcget("scale_on_zoom_2_5", "activewidth")
         self.canvas.itemconfigure(self.canvas_item, outline=self.active_outline_color, width=self.active_outline_width)
 
     def on_leave(self, event):
-        #outline_width = self.canvas.itemcget("scale_on_zoom_2_5", "width")
         self.canvas.itemconfigure(self.canvas_item, outline=self.outline_color, width=self.outline_width)
 
     def hide(self):
@@ -225,6 +224,10 @@ class GObject:
     def make_draggable(self):
         # Tag the canvas items as "dragable" so that we can drag them around the canvas
         self.canvas.addtag_withtag(self.tag + "dragable", self.canvas_item)
+
+    def set_compound_membership(self, tag):
+        # Tag the canvas item with a unique GCompound identifier
+        self.canvas.addtag_withtag(tag, self.canvas_item)
 
     def set_outline_width(self, width):
         self.outline_width = width
@@ -416,3 +419,42 @@ class GGraphPaper(GObject):
         # TODO:  on_enter and on_leave events to apply.  We should create a method that allows us to
         # TODO:  make_highlightable() on any GObject, and then we can choose NOT to for this GObject.
         # TODO:  Or, better yet, we should make it a property that we can set to True or False.
+
+
+
+
+#
+# TODO:  GCompound is Not Done -- still trying to figure things out
+# TODO:  Not sure if I'm going to keep it...Making my brain hurt.
+#
+
+class GCompound(GObject):
+
+    def __init__(self, initial_x, initial_y, name_tag=None):
+
+        # Initialize parent GObject class
+        super().__init__(initial_x, initial_y, name_tag)
+
+        self.tag = name_tag
+        self.gobjects = []
+
+    def add_part(self, gobject):
+        self.gobjects.append(gobject)
+        print("self.gobjects = {}".format(self.gobjects))
+
+    # Override - Tell all GObjects what GCanvas to draw themselves on
+    def add_to(self, gcanvas):
+        for gobject in self.gobjects:
+            print("gobject {} add_to {}".format(gobject, gcanvas))
+            # Now how do I call
+            gobject.add_to(gcanvas)
+
+    def make_draggable(self):
+        for gobject in self.gobjects:
+            print("make draggable gobject {}".format(gobject))
+            gobject.make_draggable()
+            #gobject.tag = self.tag
+            #gobject.set_compound_membership(self.tag)
+
+
+

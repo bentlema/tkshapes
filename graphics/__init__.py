@@ -9,5 +9,6 @@ from .gobject import (
     GRect,
     GOval,
     GBufferGate,
+    GCompound,
 )
 

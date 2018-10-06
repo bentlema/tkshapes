@@ -34,7 +34,7 @@ class GCanvas(tk.Frame):
         # canvas (such as a gate or wire) as those objects will be tagged with different names. We bind the
         # tag of the background objects to the click/drag events.  See below scroll_start() and scroll_move()
 
-        self.tag = "background"
+        self.tag = "BACKGROUND"
         self.bg_color = "#ff0000"
         self.canvas.create_rectangle(0, 0, self.canvas_width, self.canvas_height,
                                      fill=self.bg_color, outline=self.bg_color, tag=self.tag)
@@ -96,7 +96,8 @@ class GCanvas(tk.Frame):
     def add(self, name_tag, gobject):
         self.gobjects[name_tag] = gobject
         print(f"GCanvas knows about {len(self.gobjects)} GObjects")
-        print(f"     --> GCanvas knows about {self.gobjects}")
+        for i, gobject in enumerate(self.gobjects):
+            print(f"     {i} GCanvas knows about {gobject}")
 
     # Setup Click-and-Drag to pan the canvas.  Tkinter canvas provides scan_mark() and scan_dragto()
     # to assist in click-and-drag events.  We use these to pan/scroll the canvas.
