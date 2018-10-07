@@ -27,7 +27,7 @@ class GCanvas(tk.Frame):
 
         # Create our Tk Canvas
         self.canvas = tk.Canvas(self, width=self.canvas_width, height=self.canvas_height,
-                             borderwidth=0, highlightthickness=0)
+                                borderwidth=0, highlightthickness=0)
 
         # Draw and tag a background rectangle which will give us the ability to scroll the canvas only when
         # clicking and dragging on the background, but will not drag when we click on another object on the
@@ -35,7 +35,7 @@ class GCanvas(tk.Frame):
         # tag of the background objects to the click/drag events.  See below scroll_start() and scroll_move()
 
         self.tag = "BACKGROUND"
-        self.bg_color = "#ff0000"
+        self.bg_color = "#8888ff"
         self.canvas.create_rectangle(0, 0, self.canvas_width, self.canvas_height,
                                      fill=self.bg_color, outline=self.bg_color, tag=self.tag)
 
@@ -132,9 +132,9 @@ class GCanvas(tk.Frame):
         h = self.canvas.winfo_height()
         #print("canvas size = {}x{}".format(w, h))
         (x0, y0, x1, y1) = self.canvas.bbox(self.tag)
-        # print("bbox size = {}".format(self.canvas.bbox(self.tag)))
-        # print("x0 - x1 = {}".format(x1 - x0))
-        # print("y0 - y1 = {}".format(y1 - y0))
+        #print("bbox size = {}".format(self.canvas.bbox(self.tag)))
+        #print("x0 - x1 = {}".format(x1 - x0))
+        #print("y0 - y1 = {}".format(y1 - y0))
 
         # convert from screen coordinates to canvas coordinates (we want to scale relative to canvas coordinates)
         cx = self.canvas.canvasx(event.x)
@@ -143,30 +143,21 @@ class GCanvas(tk.Frame):
         # Zoom In
         if (event.delta > 0) and ((y1 - y0) <= 50000):
             sf = 1.1  # Just a tad more than 1
-            self.canvas.scale("all", cx, cy, sf, sf)
+            #self.canvas.scale("all", cx, cy, sf, sf)
 
         # Zoom Out
         elif (event.delta < 0) and ((x1 - x0) - 1000 >= w):
             sf = 0.9  # Just a tad less than 1
-            self.canvas.scale("all", cx, cy, sf, sf)
+            #self.canvas.scale("all", cx, cy, sf, sf)
+
+        if sf != 1.0:
+            for gobject in self.gobjects.values():
+                gobject.scale(cx, cy, sf, sf)
 
         # Adjust the scroll region based on new canvas background size.  All canvas objects, including
         # the background, have been scaled up or down, and since it's that background that
         # determines our scroll region, we have to adjust it every time we zoom in or out.
         self.canvas.configure(scrollregion=self.canvas.bbox(self.tag))
-
-        # Scale the outline width and active outline width on all canvas items too so they appear to change size
-        # at the same rate as the shapes they are depicting.  For example, as we Zoom OUT, a Circle scales IN, the
-        # width of the line drawn to show the circle on the canvas also gets thiner.  If we Zoom IN, the line drawn
-        # would be rendered thicker.  This complets the illusion that we are Zooming IN/OUT even though we are just
-        # scaling up or scaling down the size of objects.
-        #
-        # for each GObject, call the scale method to scale both the object itself, and its outline, and
-        # active outline values.  We can scale all items on the canvas as above (all at the same time) but this
-        # is only useful for Zooming IN/OUT.  GObjects should also know how to scale themselves, in case our
-        # application wants to be able to re-size an individual GObject.
-        for gobject in self.gobjects.values():
-            gobject.scale(sf)
 
     def on_button_press(self, event):
         # Clear any current selection first
