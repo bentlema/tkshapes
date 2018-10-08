@@ -4,7 +4,6 @@ from .gcanvas import GCanvas
 
 from .gobject import (
     GObject,
-    GCompound,
     GGraphPaper,
     GLine,
     GRect,

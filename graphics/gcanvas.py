@@ -2,6 +2,8 @@
 import tkinter as tk
 import tkinter.ttk as ttk
 
+from .gobject import GObject
+
 class GCanvas(tk.Frame):
 
     def __init__(self, parent, canvas_width=10000, canvas_height=10000):
@@ -14,9 +16,15 @@ class GCanvas(tk.Frame):
 
         # Remember the GObjects that are on this GCanvas
         # The GCanvas is an abstraction on top of the tkinter Canvas, and GObjects are an abstraction on top of
-        # the canvas' items.  For each GObject created on the GCanvas, there could me one or more items rendered.
+        # the canvas' items.  For each GObject created on the GCanvas, there could be one or more GItems rendered.
         # Since each GObject has a unique name_tag, we will use a Dictionary keyed off of that to store them
         self.gobjects = {}
+
+        # Registered GObject Types/Kinds
+        # The key will be the type name (e.g. 'Rectangle') with the value being a reference to the corresponding object
+        # TODO: determine how and where built-in GObjects are registered, and how a user of this module could add
+        # TODO: their own new GObject types.
+        self.gobject_types = {}
 
         # Where to send status messages
         self.status_var = None
@@ -93,11 +101,48 @@ class GCanvas(tk.Frame):
         self.canvas.xview_moveto(0.5)
         self.canvas.yview_moveto(0.5)
 
-    def add(self, name_tag, gobject):
-        self.gobjects[name_tag] = gobject
-        print(f"GCanvas knows about {len(self.gobjects)} GObjects")
-        for i, gobject in enumerate(self.gobjects):
-            print(f"     {i} GCanvas knows about {gobject}")
+    def register_gobject(self, name, a_class):
+        self.gobject_types[name] = a_class
+        print(f"Registered {name} which is a {a_class}")
+
+    def known_types(self):
+        print("Known GObject types:")
+        print(f"     Count = {len(self.gobject_types)}")
+        for t in self.gobject_types.keys():
+            print(f"     type = {t}")
+
+    def known_gobjects(self):
+        print("Known GObjects:")
+        print(f"     Count = {len(self.gobjects)}")
+        for g in self.gobjects.keys():
+            print(f"     GObject = {g}")
+
+    def create(self, a_type, *args, **kwargs):
+
+        # Get the requested GObject type from the factory
+        gobject = GObject.factory(self.gobject_types[a_type], *args, **kwargs)
+
+        # Tell the GObject that we are the GCanvas that "owns" it
+        gobject.gcanvas = self
+
+        # Now that the GObject we just created knows what GCanvas to draw on, let's add it to the canvas
+        gobject.add()
+
+        # The name is passed in via a keyword arg
+        name = kwargs['name']
+        print(f"GCanvas.create:  {name} = {gobject}")
+
+        # GCanvas will remember what GObjects it holds in gobjects Dictionary
+        self.gobjects[name] = gobject
+
+        return gobject
+
+    # Not used anymore
+    #def add(self, name_tag, gobject):
+    #    self.gobjects[name_tag] = gobject
+    #    print(f"GCanvas knows about {len(self.gobjects)} GObjects")
+    #    for i, gobject in enumerate(self.gobjects):
+    #        print(f"     {i} GCanvas knows about {gobject}")
 
     # Setup Click-and-Drag to pan the canvas.  Tkinter canvas provides scan_mark() and scan_dragto()
     # to assist in click-and-drag events.  We use these to pan/scroll the canvas.

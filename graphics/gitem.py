@@ -1,7 +1,7 @@
 
-class GObject:
+class GItem:
     '''
-    A container for GItems. Can be added to a GCanvas.
+    A wrapper around a single canvas item
     '''
 
     def __init__(self, initial_x, initial_y, name_tag=None):
@@ -18,46 +18,30 @@ class GObject:
         self.tag = name_tag
 
         # my canvas item - this will get set to something in the sub-class that inherits from me
-        # TODO: this should go away when we finish the GItem, and we will keep track of a set of
-        # TODO: GItems instead.
         self.canvas_item = None
 
-        # TODO: IN-PROGRESS: Let's keep track of the GItems here.
-        # TODO: Each GItem will have its own item-level name, so let's use a Dictionary
-        # TODO: Key will be the GItem name, and value will be the actual object
-        self.gitems = {}
-
-        # Move to GItem?
         # this data is used to keep track of a canvas object being dragged
         self._drag_data = {"x": 0, "y": 0, "item": None}
 
-        # NOTE: selection will be done at the GObject level, but bindings at GItem level
         # my selection status (am I selected or not)
         self.selected = False
 
-        # Move to GItem?
         # all fillable canvas items will use these colors
         self.fill_color = 'white'
         self.selected_fill_color = '#1111FF'
 
-        # Move to GItem?
         # current line width and active line width (changes when zooming in/out to maintain proper ratio)
         self.outline_width = 2
         self.outline_color = 'blue'
         self.active_outline_width = 5
         self.active_outline_color = 'orange'
 
-        # Move to GItem?
         # various properties
         self._selectable = True       # if the GObject can be selected or not
         self._highlightable = True    # if we highlight the GObject upon <Enter> / de-highlight upon <Leave>
         self._draggable = True        # if the GObject can be click-hold-Dragged
         self._clickable = True        # if the GObject can be clicked
         self._connectable = False     # if the GObject can be connected to another GObject
-
-    @staticmethod
-    def factory(a_class, *args, **kwargs):
-        return a_class(*args, **kwargs)
 
     def scale(self, x_offset, y_offset, x_scale, y_scale):
         ''' scale by scale factor x_scale and y_scale relative to point (x_offset, y_offset) '''
@@ -274,25 +258,8 @@ class GObject:
     def connectable(self, value):
         self._connectable = bool(value)
 
-
-# TODO:
-# TODO:
-# TODO:
-# TODO:
-# TODO:
-# TODO:
-# TODO:
-# TODO: All of the below GObjects need to be converted to use a set of GItems
-# TODO: We need to figure out what a GItem will look like, and then call the
-# TODO: appropriate method to add GItems to a GObject.
-# TODO:
-# TODO:
-# TODO:
-# TODO:
-# TODO:
-# TODO:
-
-class GLine(GObject):
+#
+class GLine(GItem):
     ''' Basic straight line draws itself on a GCanvas '''
 
     def __init__(self, initial_x, initial_y, length, name_tag=None):
@@ -318,7 +285,7 @@ class GLine(GObject):
                                                    tags=self.tag)
 
 
-class GBufferGateBody(GObject):
+class GBufferGateBody(GItem):
     ''' The Triangle draws itself on a GCanvas '''
 
     def __init__(self, initial_x, initial_y, name_tag=None):
@@ -346,16 +313,10 @@ class GBufferGateBody(GObject):
         self.gcanvas.canvas.addtag_withtag(self.tag + "activate_together", self.canvas_item)
 
 
-class GRect(GObject):
+class GRect(GItem):
     ''' Draw Square or Rectangle on a GCanvas '''
 
-    def __init__(self, *args, **kwargs):
-
-        initial_x = args[0]
-        initial_y = args[1]
-        width = args[2]
-        height = args[3]
-        name_tag = kwargs['name']
+    def __init__(self, initial_x, initial_y, width, height, name_tag=None):
 
         # Initialize parent GObject class
         super().__init__(initial_x, initial_y, name_tag)
@@ -379,16 +340,10 @@ class GRect(GObject):
         self.gcanvas.canvas.addtag_withtag(self.tag + "activate_together", self.canvas_item)
 
 
-class GOval(GObject):
+class GOval(GItem):
     ''' Draw Oval or Circle on a GCanvas '''
 
-    def __init__(self, *args, **kwargs):
-
-        initial_x = args[0]
-        initial_y = args[1]
-        width = args[2]
-        height = args[3]
-        name_tag = kwargs['name']
+    def __init__(self, initial_x, initial_y, width, height, name_tag=None):
 
         # Initialize parent GObject class
         super().__init__(initial_x, initial_y, name_tag)
@@ -413,17 +368,11 @@ class GOval(GObject):
         self.gcanvas.canvas.addtag_withtag(self.tag + "activate_together", self.canvas_item)
 
 
-
-class GGraphPaper(GObject):
+# Need to separate out the individual items
+class GGraphPaper(GItem):
     ''' Draw Graph Paper '''
 
-    def __init__(self, *args, **kwargs):
-
-        initial_x = args[0]
-        initial_y = args[1]
-        width = args[2]
-        height = args[3]
-        name_tag = kwargs['name']
+    def __init__(self, initial_x, initial_y, width, height, name_tag=None):
 
         # Initialize parent GObject class
         super().__init__(initial_x, initial_y, name_tag)
@@ -471,5 +420,88 @@ class GGraphPaper(GObject):
         # TODO:  Or, better yet, we should make it a property that we can set to True or False.
 
 
+
+class GInputConnection:
+
+    def __init__(self, parent, starting_point, label):
+        self.label = label
+        self.parent = parent
+
+        (x, y) = starting_point
+
+        self.input_line = parent.canvas.create_line(x, y, x - 15, y,
+                                                    width=2,
+                                                    activewidth=2,
+                                                    fill="blue",
+                                                    activefill="blue",
+                                                    tag=parent.tag)
+
+        self.output_joint = parent.canvas.create_oval(x - 15, y - 6, x - 27, y + 6,
+                                                      width=2,
+                                                      activewidth=5,
+                                                      fill="white",
+                                                      outline="blue",
+                                                      activeoutline="orange",
+                                                      tag=parent.tag)
+
+
+
+class GOutputConnection:
+
+    def __init__(self, parent, starting_point, label):
+        self.label = label
+        self.parent = parent
+
+        (x0, y0) = starting_point
+        (x1, y1) = x0 + 10, y0
+
+        self.output_line = parent.canvas.create_line(x0, y0, x1, y1,
+                                                     width=2,
+                                                     activewidth=2,
+                                                     fill="blue",
+                                                     activefill="blue",
+                                                     tag=parent.tag)
+
+        self.output_joint = parent.canvas.create_oval(x1, y1 - 6, x1 + 12, y1 + 6,
+                                                      width=2,
+                                                      activewidth=5,
+                                                      fill="white",
+                                                      outline="blue",
+                                                      activeoutline="orange",
+                                                      tag=parent.tag)
+
+
+
+class GInvertedOutputConnection:
+
+    def __init__(self, parent, starting_point, label):
+        self.label = label
+        self.parent = parent
+
+        (x0, y0) = starting_point
+        (x1, y1) = x0 + 10, y0
+
+        self.output_line = parent.canvas.create_line(x0 + 8, y0, x1 + 8, y1,
+                                                     width=2,
+                                                     activewidth=2,
+                                                     fill="blue",
+                                                     activefill="blue",
+                                                     tag=parent.tag)
+
+        self.output_inverter = parent.canvas.create_oval(x0, y0 - 4, x0 + 8, y0 + 4,
+                                                         width=2,
+                                                         activewidth=5,
+                                                         fill="white",
+                                                         outline="blue",
+                                                         activeoutline="orange",
+                                                         tag=parent.tag)
+
+        self.output_joint = parent.canvas.create_oval(x1 + 8, y1 - 6, x1 + 20, y1 + 6,
+                                                      width=2,
+                                                      activewidth=5,
+                                                      fill="white",
+                                                      outline="blue",
+                                                      activeoutline="orange",
+                                                      tag=parent.tag)
 
 
