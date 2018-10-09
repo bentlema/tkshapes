@@ -7,10 +7,11 @@ from graphics import (
     AppRootWindow,
     GCanvas,
     GGraphPaper,
-    GLine,
-    GRect,
-    GOval,
-    GBufferGateBody,
+    GFoo,
+#    GLine,
+#    GRect,
+#    GOval,
+#    GBufferGateBody,
 )
 
 root = tk.Tk()
@@ -82,8 +83,9 @@ gcanvas.register_status_var(status_text)
 # GCanvas so the GCanvas knows all of the valid kinds of shapes we can create on the canvas.
 # Then we can call the new method like this:
 gcanvas.register_gobject('GGraphPaper', GGraphPaper)
-gcanvas.register_gobject('GRect', GRect)
-gcanvas.register_gobject('GOval', GOval)
+#gcanvas.register_gobject('GRect', GRect)
+#gcanvas.register_gobject('GOval', GOval)
+gcanvas.register_gobject('GFoo', GFoo)
 
 # The 'BACKGROUND' name will associate this GObject with the immovable background items
 graph_paper = gcanvas.create('GGraphPaper', 0, 0, 10000, 10000, name="BACKGROUND")
@@ -94,13 +96,13 @@ graph_paper.show()
 
 # GObjects are "spawned" into existence by the create() method on the GCanvas
 # The name passed in must be unique, and is used to remember the object on the GCanvas
-rectangle = gcanvas.create('GRect', 5200, 5200, 100, 200, name='MyFirstRectangle')
+#rectangle = gcanvas.create('GRect', 5200, 5200, 100, 200, name='MyFirstRectangle')
 
 # This should be made into a property
-rectangle.make_draggable()
+#rectangle.make_draggable()
 
 # This should probably be moved into the GCanvas.create() but not sure yet
-rectangle.add_mouse_bindings()
+#rectangle.add_mouse_bindings()
 
 # We now have a handle to the 'Rectangle' GObject.  The argument is an arbitrary name, but
 # obviously should make sense describing what the GObject is.  Later, we will define other
@@ -123,19 +125,26 @@ rectangle.add_mouse_bindings()
 #rectangle.draggable = True
 
 # show the rectangle GObject on the GCanvas. (default is 'hidden')
-rectangle.show()
+#rectangle.show()
 
 # Let's add another GObject
-circle = gcanvas.create('GOval', 5400, 5200, 100, 100, name="Circle")
-circle.make_draggable()
-circle.add_mouse_bindings()
-circle.show()
+#circle = gcanvas.create('GOval', 5400, 5200, 100, 100, name="Circle")
+#circle.make_draggable()
+#circle.add_mouse_bindings()
+#circle.show()
 
 # Let's add another GObject
-square = gcanvas.create('GRect', 5600, 5200, 100, 100, name="MySquare")
-square.make_draggable()
-square.add_mouse_bindings()
-square.show()
+#square = gcanvas.create('GRect', 5600, 5200, 100, 100, name="MySquare")
+#square.make_draggable()
+#square.add_mouse_bindings()
+#square.show()
+
+# Let's add test object GFoo
+foo = gcanvas.create('GFoo', 5600, 5200, 100, name="MyGFooTestObject")
+#foo.make_draggable()
+#foo.make_undraggable()
+foo.add_mouse_bindings()
+foo.show()
 
 # Print some debug info
 gcanvas.known_types()
