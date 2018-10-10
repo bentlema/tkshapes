@@ -169,17 +169,13 @@ class GCanvas(tk.Frame):
             self.canvas.yview_scroll(-1 * event.delta, "units")
 
     def on_zoom(self, event):
-        # We scale the canvas to simulate a zoom in/out
-        # We scale about the current location of the pointer
-        # print("\n\nmouse pointer {},{}".format(event.x, event.y))
+        '''
+        We scale the canvas and all items on it to simulate a zoom in/out
+        '''
         sf = 1.0
         w = self.canvas.winfo_width()
         h = self.canvas.winfo_height()
-        #print("canvas size = {}x{}".format(w, h))
         (x0, y0, x1, y1) = self.canvas.bbox(self.tag)
-        #print("bbox size = {}".format(self.canvas.bbox(self.tag)))
-        #print("x0 - x1 = {}".format(x1 - x0))
-        #print("y0 - y1 = {}".format(y1 - y0))
 
         # convert from screen coordinates to canvas coordinates (we want to scale relative to canvas coordinates)
         cx = self.canvas.canvasx(event.x)
@@ -188,12 +184,10 @@ class GCanvas(tk.Frame):
         # Zoom In
         if (event.delta > 0) and ((y1 - y0) <= 50000):
             sf = 1.1  # Just a tad more than 1
-            #self.canvas.scale("all", cx, cy, sf, sf)
 
         # Zoom Out
         elif (event.delta < 0) and ((x1 - x0) - 1000 >= w):
             sf = 0.9  # Just a tad less than 1
-            #self.canvas.scale("all", cx, cy, sf, sf)
 
         if sf != 1.0:
             for gobject in self.gobjects.values():

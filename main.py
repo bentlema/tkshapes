@@ -8,10 +8,7 @@ from graphics import (
     GCanvas,
     GGraphPaper,
     GFoo,
-#    GLine,
-#    GRect,
-#    GOval,
-#    GBufferGateBody,
+    GBufferGate,
 )
 
 root = tk.Tk()
@@ -86,6 +83,7 @@ gcanvas.register_gobject('GGraphPaper', GGraphPaper)
 #gcanvas.register_gobject('GRect', GRect)
 #gcanvas.register_gobject('GOval', GOval)
 gcanvas.register_gobject('GFoo', GFoo)
+gcanvas.register_gobject('GBufferGate', GBufferGate)
 
 # The 'BACKGROUND' name will associate this GObject with the immovable background items
 graph_paper = gcanvas.create('GGraphPaper', 0, 0, 10000, 10000, name="BACKGROUND")
@@ -140,11 +138,17 @@ graph_paper.show()
 #square.show()
 
 # Let's add test object GFoo
-foo = gcanvas.create('GFoo', 5600, 5200, 100, name="MyGFooTestObject")
-#foo.make_draggable()
-#foo.make_undraggable()
-foo.add_mouse_bindings()
-foo.show()
+foo1 = gcanvas.create('GFoo', 5400, 5100, 80, name="Foo1")
+foo1.add_mouse_bindings()
+foo1.show()
+
+foo2 = gcanvas.create('GFoo', 5300, 5200, 100, name="Foo2")
+foo2.add_mouse_bindings()
+foo2.show()
+
+gate1 = gcanvas.create('GBufferGate', 5200, 5400, name="Gate1")
+gate1.add_mouse_bindings()
+gate1.show()
 
 # Print some debug info
 gcanvas.known_types()

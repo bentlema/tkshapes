@@ -6,14 +6,12 @@ from .gobject import (
     GObject,
     GGraphPaper,
     GFoo,
-#    GLine,
-#    GRect,
-#    GOval,
-#    GBufferGateBody,
+    GBufferGate,
 )
 
 from .gitem import (
     GLine,
+    GBufferGateBody,
 )
 
 

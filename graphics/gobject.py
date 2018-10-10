@@ -10,6 +10,7 @@
 from .gitem import (
     GLine,
     GOval,
+    GBufferGateBody,
 )
 
 class GObject:
@@ -80,28 +81,20 @@ class GObject:
         # scale the canvas items associated with self._tag
         self.gcanvas.canvas.scale(self._tag, x_offset, y_offset, x_scale, y_scale)
 
-        # also scale the outline width
-        self.scale_outline_width(x_scale)
+        # in theory, we could scale at different rates horizontally vs vertically, but
+        # line widths are constant accross the whole item, so we just pick the x_scale
+        sf = x_scale
 
-
-    # as GItems will be tagged with the parent name tag, we can continue to scale in the same way (i think)
-    def scale_outline_width(self, sf):
-        ''' scale outline width and active outline width by scale factor sf '''
-
-        # Scale my outline and active_outline widths
-        current_width = self.outline_width
-        current_activewidth = self.active_outline_width
-        new_width = float(current_width) * sf
-        new_activewidth = float(current_activewidth) * sf
-        self.gcanvas.canvas.itemconfigure(self._tag, width=new_width)
-        self.outline_width = new_width
-
-        # We adjust activewidth / active_outline_width ONLY if the GObject is highlightable
-        if self.highlightable:
-            self.gcanvas.canvas.itemconfigure(self._tag, activewidth=new_activewidth)
-            self.active_outline_width = new_activewidth
-
-        #print(f"{sf} {self._tag} new width {new_width} new active width {new_activewidth}")
+        # scale my outline and active_outline widths
+        for gitem_name in self._gitems:
+            gitem = self._gitems[gitem_name]
+            current_width = gitem.outline_width
+            current_activewidth = gitem.active_outline_width
+            new_width = float(current_width) * sf
+            new_activewidth = float(current_activewidth) * sf
+            gitem.outline_width = new_width
+            gitem.active_outline_width = new_activewidth
+            #print(f"{sf} {gitem_name}({gitem.item}) new width {new_width} new active width {new_activewidth}")
 
 
     def add_mouse_bindings(self):
@@ -334,10 +327,6 @@ class GFoo(GObject):
         # Initialize parent GObject class
         super().__init__(initial_x, initial_y, name_tag)
 
-        # we do not want our line to be selectable or highlightable
-        self.selectable = True
-        self.highlightable = True
-
         # attributes unique to the GFoo
         self.length = length
 
@@ -372,6 +361,23 @@ class GFoo(GObject):
         self._gitems['oval1'].selectable = True
 
 
+class GBufferGate(GObject):
+
+    def __init__(self, *args, **kwargs):
+
+        initial_x = args[0]
+        initial_y = args[1]
+        name_tag = kwargs['name']
+
+        # Initialize parent GObject class
+        super().__init__(initial_x, initial_y, name_tag)
+
+    def add(self):
+
+        self._gitems['body'] = GBufferGateBody(self.gcanvas, self._x, self._y, self._tag)
+        self._gitems['body'].add()
+        self._gitems['body'].hidden = False
+        self._gitems['body'].draggable = True
 
 
 #class GBufferGateBody(GObject):
