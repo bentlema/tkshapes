@@ -3,8 +3,9 @@
 import tkinter as tk
 import tkinter.ttk as ttk
 
-from graphics import (
-    AppRootWindow,
+from tkapp import AppRootWindow
+
+from tkshapes import (
     GCanvas,
     GGraphPaper,
     GFoo,
