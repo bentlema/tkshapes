@@ -8,10 +8,14 @@ from graphics import (
     GCanvas,
     GGraphPaper,
     GFoo,
+    GRect,
+    GOval,
     GBufferGate,
 )
 
 root = tk.Tk()
+
+root.title("This is the title for the root window")
 
 status_text = tk.StringVar()
 status_text.set("This is the statusbar text")
@@ -30,59 +34,13 @@ gcanvas = GCanvas(root_window, canvas_width=10000, canvas_height=10000)
 gcanvas.pack(fill="both", expand=True)
 gcanvas.register_status_var(status_text)
 
-# The 'BACKGROUND' name_tag will associate this GObject with the immovable background items
-#graph_paper = GGraphPaper(0, 0, 10000, 10000, name_tag="BACKGROUND")
-#graph_paper.set_outline_width(2)
-#graph_paper.set_active_outline_width(0)
-#graph_paper.add_to(gcanvas)
-
-#rectangle = GRect(5200, 5200, 100, 200, name_tag="Rectangle")
-#rectangle.add_to(gcanvas)
-#rectangle.make_draggable()
-
-#circle = GOval(5400, 5200, 100, 100, name_tag="Circle")
-#circle.add_to(gcanvas)
-#circle.make_draggable()
-
-#buffer_gate_body = GBufferGateBody(5100, 5100, name_tag="BufferGateBody")
-#buffer_gate_body.add_to(gcanvas)
-#buffer_gate_body.make_draggable()
-
-#buffer_gate_input_line = GLine(5090, 5128, 10, name_tag="BufferGateInputLine")
-#buffer_gate_input_line.add_to(gcanvas)
-
-#buffer_gate_input_point = GOval(5080, 5123, 10, 10, name_tag="BufferGateInputPoint")
-#buffer_gate_input_point.add_to(gcanvas)
-
-#buffer_gate_output_line = GLine(5158, 5128, 10, name_tag="BufferGateOutputLine")
-#buffer_gate_output_line.add_to(gcanvas)
-
-#buffer_gate_output_point = GOval(5168, 5123, 10, 10, name_tag="BufferGateOutputPoint")
-#buffer_gate_output_point.add_to(gcanvas)
-
-#compound = GCompound(5000, 5000, name_tag="BufferGateComplete")
-#compound.add_part(buffer_gate_body)
-#compound.add_part(buffer_gate_input_line)
-#compound.add_part(buffer_gate_input_point)
-#compound.add_part(buffer_gate_output_line)
-#compound.add_part(buffer_gate_output_point)
-#compound.add_to(gcanvas)
-#buffer_gate_body.make_draggable()
-
-
-#
-# We are completely re-doing the GObject, and GCompound.  Instead we will have a GObject and GItem.
-# The GObject will be made up of GItems.  They will each have their own interfaces, which is
-# unlike what I was trying to do with GObject and GCompound, which shared the same interface.
-# So what we'll end up with is a GCanvas that contains GObjects that contains GItems
-#
 # The various GObject shapes will be defined in the GObject class, and then "registered" with the
 # GCanvas so the GCanvas knows all of the valid kinds of shapes we can create on the canvas.
 # Then we can call the new method like this:
 gcanvas.register_gobject('GGraphPaper', GGraphPaper)
-#gcanvas.register_gobject('GRect', GRect)
-#gcanvas.register_gobject('GOval', GOval)
 gcanvas.register_gobject('GFoo', GFoo)
+gcanvas.register_gobject('GRect', GRect)
+gcanvas.register_gobject('GOval', GOval)
 gcanvas.register_gobject('GBufferGate', GBufferGate)
 
 # The 'BACKGROUND' name will associate this GObject with the immovable background items
@@ -94,59 +52,63 @@ graph_paper.show()
 
 # GObjects are "spawned" into existence by the create() method on the GCanvas
 # The name passed in must be unique, and is used to remember the object on the GCanvas
-#rectangle = gcanvas.create('GRect', 5200, 5200, 100, 200, name='MyFirstRectangle')
-
-# This should be made into a property
-#rectangle.make_draggable()
-
-# This should probably be moved into the GCanvas.create() but not sure yet
-#rectangle.add_mouse_bindings()
-
-# We now have a handle to the 'Rectangle' GObject.  The argument is an arbitrary name, but
-# obviously should make sense describing what the GObject is.  Later, we will define other
-# more complex GObjects  such as 'AND_Gate', 'OR_Gate', 'Inverter', etc.
 #
-# We've not provided any dimensions, or location, or colors, etc., for our GObject, so...
+# TODO: Currently nothing enforces a unique name, and if the programmer uses an already-used
+# TODO: name, the generated GObjects will move together on the canvas.  This is not intended
+# TODO: to be used as a feature, and eventually I'll get rid of the manual setting of the
+# TODO: name, and a randomly-generated ID will be used.  I may still implement the idea
+# TODO: of a label, which could be used for display only, but we want to hide the implementation
+# TODO: details of how the name is currently used as an underlying canvas item tag.
 
-# location is a property.  This specifies the x,y coordinates.
-#rectangle.location = (5200, 5200)
+circle1 = gcanvas.create('GOval', 5320, 5100, 100, 100, name="Circle1")
+circle1.add_mouse_bindings()
+circle1.show()
 
-# dimensions is a property.  This specifies a 100x200 size rectangle.
-#rectangle.dimensions = (100, 200)
+circle2 = gcanvas.create('GOval', 5310, 5200, 50, 50, name="Circle2")
+circle2.add_mouse_bindings()
+circle2.show()
 
-# draggable is a property.  This says that we are able to click-and-drag the GObject on the GCanvas.
-# Note:  the individual GItems making up the GObject will have to define if they accept a click-drag
-# or not.  We can accomplish this by setting the 'draggable' tag on those parts (items) that can be
-# clicked for a click-and-drag operation.  For example, on an 'AND_Gate', we want to be able to drag
-# it only when clicking/holding/dragging on the main body of the gate.  If we click/hold and attempt
-# to drag one of the inputs or outputs, nothing would/should happen.
-#rectangle.draggable = True
+circle3 = gcanvas.create('GOval', 5300, 5250, 20, 20, name="Circle3")
+circle3.add_mouse_bindings()
+circle3.show()
 
-# show the rectangle GObject on the GCanvas. (default is 'hidden')
-#rectangle.show()
+oval1 = gcanvas.create('GOval', 5200, 5200, 20, 30, name="Oval1")
+oval1.add_mouse_bindings()
+oval1.show()
 
-# Let's add another GObject
-#circle = gcanvas.create('GOval', 5400, 5200, 100, 100, name="Circle")
-#circle.make_draggable()
-#circle.add_mouse_bindings()
-#circle.show()
+oval2 = gcanvas.create('GOval', 5200, 5250, 50, 40, name="Oval2")
+oval2.add_mouse_bindings()
+oval2.show()
 
-# Let's add another GObject
-#square = gcanvas.create('GRect', 5600, 5200, 100, 100, name="MySquare")
-#square.make_draggable()
-#square.add_mouse_bindings()
-#square.show()
+oval3 = gcanvas.create('GOval', 5200, 5300, 100, 130, name="Oval3")
+oval3.add_mouse_bindings()
+oval3.show()
 
-# Let's add test object GFoo
-foo1 = gcanvas.create('GFoo', 5400, 5100, 80, name="Foo1")
+square1 = gcanvas.create('GRect', 5600, 5040, 100, 100, name="Square1")
+square1.add_mouse_bindings()
+square1.show()
+
+square2 = gcanvas.create('GRect', 5650, 5160, 75, 75, name="Square2")
+square2.add_mouse_bindings()
+square2.show()
+
+square3 = gcanvas.create('GRect', 5675, 5250, 25, 25, name="Square3")
+square3.add_mouse_bindings()
+square3.show()
+
+foo1 = gcanvas.create('GFoo', 5500, 5100, 50, name="Foo1")
 foo1.add_mouse_bindings()
 foo1.show()
 
-foo2 = gcanvas.create('GFoo', 5300, 5200, 100, name="Foo2")
+foo2 = gcanvas.create('GFoo', 5500, 5200, 100, name="Foo2")
 foo2.add_mouse_bindings()
 foo2.show()
 
-gate1 = gcanvas.create('GBufferGate', 5200, 5400, name="Gate1")
+foo3 = gcanvas.create('GFoo', 5500, 5350, 150, name="Foo3")
+foo3.add_mouse_bindings()
+foo3.show()
+
+gate1 = gcanvas.create('GBufferGate', 5100, 5100, name="Gate1")
 gate1.add_mouse_bindings()
 gate1.show()
 

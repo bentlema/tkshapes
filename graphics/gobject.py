@@ -8,8 +8,9 @@
 # in the GObject based off of those tags.
 
 from .gitem import (
-    GLine,
-    GOval,
+    GLineItem,
+    GRectItem,
+    GOvalItem,
     GBufferGateBody,
 )
 
@@ -39,7 +40,7 @@ class GObject:
         # TODO: IN-PROGRESS: Let's keep track of the GItems here.
         # TODO: Each GItem will have its own item-level name, so let's use a Dictionary
         # TODO: Key will be the GItem name, and value will be the actual object
-        self._gitems = {}
+        self._items = {}
 
         # Move to GItem?
         # this data is used to keep track of a canvas object being dragged
@@ -86,8 +87,8 @@ class GObject:
         sf = x_scale
 
         # scale my outline and active_outline widths
-        for gitem_name in self._gitems:
-            gitem = self._gitems[gitem_name]
+        for gitem_name in self._items:
+            gitem = self._items[gitem_name]
             current_width = gitem.outline_width
             current_activewidth = gitem.active_outline_width
             new_width = float(current_width) * sf
@@ -241,15 +242,15 @@ class GObject:
     # TODO: initiated from itself, not whether the larger GObject can be dragged.
     def make_undraggable(self):
         ''' Make the GObject undraggable (immovable) across the canvas '''
-        for i in self._gitems:
+        for i in self._items:
             print(f"Setting GItem {i} dragability to False")
-            self._gitems[i].draggable = False
+            self._items[i].draggable = False
 
     def make_draggable(self):
         ''' Make the GObject draggable across the canvas '''
-        for i in self._gitems:
+        for i in self._items:
             print(f"Setting GItem {i} dragability to True")
-            self._gitems[i].draggable = True
+            self._items[i].draggable = True
 
     def set_outline_width(self, width):
         self.outline_width = width
@@ -334,31 +335,31 @@ class GFoo(GObject):
         # we need to make a registration method, the same way we did for GObjects with GCanvas
         # but for now, let's just do this hard coded...
 
-        self._gitems['line1'] = GLine(self.gcanvas, self._x, self._y, self.length, self._tag)
-        self._gitems['line1'].add()
-        self._gitems['line1'].hidden = False
-        self._gitems['line1'].draggable = False
+        self._items['line1'] = GLineItem(self.gcanvas, self._x, self._y, self.length, self._tag)
+        self._items['line1'].add()
+        self._items['line1'].hidden = False
+        self._items['line1'].draggable = False
 
-        self._gitems['line2'] = GLine(self.gcanvas, self._x, self._y + 4, self.length, self._tag)
-        self._gitems['line2'].add()
-        self._gitems['line2'].hidden = False
-        self._gitems['line2'].draggable = False
+        self._items['line2'] = GLineItem(self.gcanvas, self._x, self._y + 4, self.length, self._tag)
+        self._items['line2'].add()
+        self._items['line2'].hidden = False
+        self._items['line2'].draggable = False
 
-        self._gitems['line3'] = GLine(self.gcanvas, self._x, self._y + 8, self.length, self._tag)
-        self._gitems['line3'].add()
-        self._gitems['line3'].hidden = False
-        self._gitems['line3'].draggable = False
+        self._items['line3'] = GLineItem(self.gcanvas, self._x, self._y + 8, self.length, self._tag)
+        self._items['line3'].add()
+        self._items['line3'].hidden = False
+        self._items['line3'].draggable = False
 
-        self._gitems['line4'] = GLine(self.gcanvas, self._x, self._y + 12, self.length, self._tag)
-        self._gitems['line4'].add()
-        self._gitems['line4'].hidden = False
-        self._gitems['line4'].draggable = False
+        self._items['line4'] = GLineItem(self.gcanvas, self._x, self._y + 12, self.length, self._tag)
+        self._items['line4'].add()
+        self._items['line4'].hidden = False
+        self._items['line4'].draggable = False
 
-        self._gitems['oval1'] = GOval(self.gcanvas, self._x, self._y + 16, self.length, self.length, self._tag)
-        self._gitems['oval1'].add()
-        self._gitems['oval1'].hidden = False
-        self._gitems['oval1'].draggable = True
-        self._gitems['oval1'].selectable = True
+        self._items['oval1'] = GOvalItem(self.gcanvas, self._x, self._y + 16, self.length, self.length, self._tag)
+        self._items['oval1'].add()
+        self._items['oval1'].hidden = False
+        self._items['oval1'].draggable = True
+        self._items['oval1'].selectable = True
 
 
 class GBufferGate(GObject):
@@ -374,105 +375,93 @@ class GBufferGate(GObject):
 
     def add(self):
 
-        self._gitems['body'] = GBufferGateBody(self.gcanvas, self._x, self._y, self._tag)
-        self._gitems['body'].add()
-        self._gitems['body'].hidden = False
-        self._gitems['body'].draggable = True
+        self._items['output_line'] = GLineItem(self.gcanvas, self._x + 58, self._y + 28, 10, self._tag)
+        self._items['output_line'].add()
+        self._items['output_line'].hidden = False
+        self._items['output_line'].draggable = False
+
+        self._items['output_dot'] = GOvalItem(self.gcanvas, self._x + 68, self._y + 23, 10, 10, self._tag)
+        self._items['output_dot'].add()
+        self._items['output_dot'].hidden = False
+        self._items['output_dot'].draggable = False
+
+        self._items['input_line1'] = GLineItem(self.gcanvas, self._x, self._y + 19, -10, self._tag)
+        self._items['input_line1'].add()
+        self._items['input_line1'].hidden = False
+        self._items['input_line1'].draggable = False
+
+        self._items['input_dot1'] = GOvalItem(self.gcanvas, self._x - 20, self._y + 14, 10, 10, self._tag)
+        self._items['input_dot1'].add()
+        self._items['input_dot1'].hidden = False
+        self._items['input_dot1'].draggable = False
+
+        self._items['input_line2'] = GLineItem(self.gcanvas, self._x, self._y + 37, -10, self._tag)
+        self._items['input_line2'].add()
+        self._items['input_line2'].hidden = False
+        self._items['input_line2'].draggable = False
+
+        self._items['input_dot2'] = GOvalItem(self.gcanvas, self._x - 20, self._y + 32, 10, 10, self._tag)
+        self._items['input_dot2'].add()
+        self._items['input_dot2'].hidden = False
+        self._items['input_dot2'].draggable = False
+
+        self._items['body'] = GBufferGateBody(self.gcanvas, self._x, self._y, self._tag)
+        self._items['body'].add()
+        self._items['body'].hidden = False
+        self._items['body'].draggable = True
 
 
-#class GBufferGateBody(GObject):
-#    ''' The Triangle draws itself on a GCanvas '''
-#
-#    def __init__(self, initial_x, initial_y, name_tag=None):
-#
-#        # Initialize parent GObject class
-#        super().__init__(initial_x, initial_y, name_tag)
-#
-#    def add(self):
-#        # Draw the triangle portion of the BufferGate
-#        points = []
-#        points.extend((self.x, self.y))              # first point in polygon
-#        points.extend((self.x + 58, self.y + 28))
-#        points.extend((self.x +  0, self.y + 56))
-#
-#        self.canvas_item = self.gcanvas.canvas.create_polygon(points,
-#                                                      outline=self.outline_color,
-#                                                      activeoutline=self.active_outline_color,
-#                                                      fill=self.fill_color,
-#                                                      width=self.outline_width,
-#                                                      activewidth=self.active_outline_width,
-#                                                      state='hidden',
-#                                                      tags=self._tag)
-#
-#        # Tag the specific canvas items we want to activate (highlight) together
-#        self.gcanvas.canvas.addtag_withtag(self._tag + "activate_together", self.canvas_item)
+class GRect(GObject):
+    ''' Draw Square or Rectangle on a GCanvas '''
+
+    def __init__(self, *args, **kwargs):
+
+        initial_x = args[0]
+        initial_y = args[1]
+        width = args[2]
+        height = args[3]
+        name_tag = kwargs['name']
+
+        # Initialize parent GObject class
+        super().__init__(initial_x, initial_y, name_tag)
+
+        # attributes unique to a GRect
+        self._width = width
+        self._height = height
+
+    def add(self):
+
+        self._items['rect1'] = GRectItem(self.gcanvas, self._x, self._y, self._width, self._height, self._tag)
+        self._items['rect1'].add()
+        self._items['rect1'].hidden = False
+        self._items['rect1'].draggable = True
 
 
-#class GRect(GObject):
-#    ''' Draw Square or Rectangle on a GCanvas '''
-#
-#    def __init__(self, *args, **kwargs):
-#
-#        initial_x = args[0]
-#        initial_y = args[1]
-#        width = args[2]
-#        height = args[3]
-#        name_tag = kwargs['name']
-#
-#        # Initialize parent GObject class
-#        super().__init__(initial_x, initial_y, name_tag)
-#
-#        self.width = width
-#        self.height = height
-#
-#    def add(self):
-#        self.canvas_item = self.gcanvas.canvas.create_rectangle(self.x, self.y,
-#                                                        self.x + self.width, self.y + self.height,
-#                                                        outline=self.outline_color,
-#                                                        activeoutline=self.active_outline_color,
-#                                                        fill=self.fill_color,
-#                                                        width=self.outline_width,
-#                                                        activewidth=self.active_outline_width,
-#                                                        state='hidden',
-#                                                        tags=self._tag)
-#
-#        # Tag the specific canvas items we want to activate (highlight) together
-#        self.gcanvas.canvas.addtag_withtag(self._tag + "activate_together", self.canvas_item)
-#
-#
-#class GOval(GObject):
-#    ''' Draw Oval or Circle on a GCanvas '''
-#
-#    def __init__(self, *args, **kwargs):
-#
-#        initial_x = args[0]
-#        initial_y = args[1]
-#        width = args[2]
-#        height = args[3]
-#        name_tag = kwargs['name']
-#
-#        # Initialize parent GObject class
-#        super().__init__(initial_x, initial_y, name_tag)
-#
-#        self.width = width
-#        self.height = height
-#
-#    def add(self):
-#        # Create the canvas item in a hidden state so that we can show it only when we want to
-#        self.canvas_item = self.gcanvas.canvas.create_oval(self.x, self.y,
-#                                                   self.x + self.width, self.y + self.height,
-#                                                   outline=self.outline_color,
-#                                                   activeoutline=self.active_outline_color,
-#                                                   fill=self.fill_color,
-#                                                   width=self.outline_width,
-#                                                   activewidth=self.active_outline_width,
-#                                                   state='hidden',
-#                                                   tags=self._tag)
-#
-#        # Tag the specific canvas items we want to activate (highlight) together
-#        self.gcanvas.canvas.addtag_withtag(self._tag + "activate_together", self.canvas_item)
-#
-#
+class GOval(GObject):
+    ''' Draw Oval or Circle on a GCanvas '''
+
+    def __init__(self, *args, **kwargs):
+
+        initial_x = args[0]
+        initial_y = args[1]
+        width = args[2]
+        height = args[3]
+        name_tag = kwargs['name']
+
+        # Initialize parent GObject class
+        super().__init__(initial_x, initial_y, name_tag)
+
+        # attributes unique to a GOval
+        self._width = width
+        self._height = height
+
+    def add(self):
+
+        self._items['output_dot'] = GOvalItem(self.gcanvas, self._x, self._y, self._width, self._height, self._tag)
+        self._items['output_dot'].add()
+        self._items['output_dot'].hidden = False
+        self._items['output_dot'].draggable = True
+
 
 class GGraphPaper(GObject):
     ''' Draw Graph Paper '''
