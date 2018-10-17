@@ -12,9 +12,9 @@ from .gobject import (
 
 from .gitem import (
     GLineItem,
+    GLineItem2,
     GRectItem,
     GOvalItem,
     GBufferGateBody,
 )
-
 

@@ -169,9 +169,9 @@ class GCanvas(tk.Frame):
             self.canvas.yview_scroll(-1 * event.delta, "units")
 
     def on_zoom(self, event):
-        '''
+        """
         We scale the canvas and all items on it to simulate a zoom in/out
-        '''
+        """
         sf = 1.0
         w = self.canvas.winfo_width()
         h = self.canvas.winfo_height()
@@ -245,5 +245,4 @@ class GCanvas(tk.Frame):
 
     def register_status_var(self, var):
         self.status_var = var
-
 

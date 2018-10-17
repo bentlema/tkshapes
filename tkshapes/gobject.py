@@ -9,15 +9,16 @@
 
 from .gitem import (
     GLineItem,
+    GLineItem2,
     GRectItem,
     GOvalItem,
     GBufferGateBody,
 )
 
 class GObject:
-    '''
+    """
     A container for GItems. Can be added to a GCanvas.
-    '''
+    """
 
     def __init__(self, initial_x, initial_y, name_tag=None):
 
@@ -77,7 +78,7 @@ class GObject:
 
     # as GItems will be tagged with the parent name tag, we can continue to scale in the same way (i think)
     def scale(self, x_offset, y_offset, x_scale, y_scale):
-        ''' scale by scale factor x_scale and y_scale relative to point (x_offset, y_offset) '''
+        """ scale by scale factor x_scale and y_scale relative to point (x_offset, y_offset) """
 
         # scale the canvas items associated with self._tag
         self.gcanvas.canvas.scale(self._tag, x_offset, y_offset, x_scale, y_scale)
@@ -85,6 +86,13 @@ class GObject:
         # in theory, we could scale at different rates horizontally vs vertically, but
         # line widths are constant accross the whole item, so we just pick the x_scale
         sf = x_scale
+
+        # TODO: Figure out a way to speed this up.  As we get lots of GItems, zooming
+        # TODO: slows down, and is choppy because of this for loop.  The background
+        # TODO: GraphPaper adds a ton of GItems, so consider how we might get around
+        # TODO: that.  Maybe we should write a special GCanvasBackground object, and
+        # TODO: then we could optimize zooming by keeping all of those GItems out of
+        # TODO: the dictionary of GItems.
 
         # scale my outline and active_outline widths
         for gitem_name in self._items:
@@ -115,19 +123,19 @@ class GObject:
         self.gcanvas.canvas.bind("<<Selection>>", self.on_selection_event, "+")
 
     def on_button_press(self, event):
-        ''' Beginning drag of an object - record the item and its location '''
+        """ Beginning drag of an object - record the item and its location """
         self._drag_data["item"] = self.gcanvas.canvas.find_closest(event.x, event.y)[0]
         self._drag_data["x"] = event.x
         self._drag_data["y"] = event.y
 
     def on_button_release(self, event):
-        ''' End drag of an object - reset the drag information '''
+        """ End drag of an object - reset the drag information """
         self._drag_data["item"] = None
         self._drag_data["x"] = 0
         self._drag_data["y"] = 0
 
     def on_button_motion(self, event):
-        ''' Handle dragging of an object '''
+        """ Handle dragging of an object """
 
         # This handler could be triggered by an accidental B1-Motion event while Command-Clicking to [de]select
         if self._drag_data["item"] is None:
@@ -153,6 +161,7 @@ class GObject:
 
         # Since all items will have the "selected" tag, we only need to check the 1st one
         if "selected" in tags_on_1st_item:
+            self.raise_with_tag("selected")
             self.gcanvas.canvas.move("selected", delta_x, delta_y)
         else:
             self.gcanvas.canvas.move(self._tag, delta_x, delta_y)
@@ -166,7 +175,7 @@ class GObject:
             self.gcanvas.status_var.set("Dragging something...")
 
     def on_command_button_press(self, event):
-        ''' handle Command-Click on a GObject '''
+        """ handle Command-Click on a GObject """
 
         # convert from screen coords to canvas coords
         canvas = event.widget
@@ -183,6 +192,15 @@ class GObject:
                 self.clear_selected()
         else:
             print("Item {} not selectable.".format(clicked_item))
+
+    def raise_with_tag(self, tag):
+        items = self.gcanvas.canvas.find_withtag(tag)
+        #print(f"Items found with tag: {tag} = {items}")
+        for item in items:
+            tags_on_item = self.gcanvas.canvas.gettags(item)
+            #print(f"    --> Tags on item {item} = {tags_on_item}")
+            if "raisable" in tags_on_item:
+                self.gcanvas.canvas.tag_raise(item)
 
     def set_selected(self):
         if self.selectable:
@@ -223,7 +241,18 @@ class GObject:
             self.clear_selected()
 
     def on_enter(self, event):
-        self.gcanvas.canvas.tag_raise(self._tag)
+        # We want to raise canvas items, but only based on an attribute of the GItem, say, called "raisable" or "auto_raise"
+
+        # convert from screen coords to canvas coords
+        canvas = event.widget
+        x = canvas.canvasx(event.x)
+        y = canvas.canvasy(event.y)
+        entered_item_id = self.gcanvas.canvas.find_closest(x, y)[0]
+        tags_on_id = self.gcanvas.canvas.gettags(entered_item_id)
+        #print(f"{x}x{y} item {entered_item_id} with tags {tags_on_id}: ")
+        if "raisable" in tags_on_id:
+            self.gcanvas.canvas.tag_raise(self._tag)
+
         self.gcanvas.canvas.itemconfigure(self.canvas_item, outline=self.active_outline_color, width=self.active_outline_width)
 
     def on_leave(self, event):
@@ -241,13 +270,13 @@ class GObject:
     # TODO: like "allow_initiate_drag" as it indicates that a click/drag can be
     # TODO: initiated from itself, not whether the larger GObject can be dragged.
     def make_undraggable(self):
-        ''' Make the GObject undraggable (immovable) across the canvas '''
+        """ Make the GObject undraggable (immovable) across the canvas """
         for i in self._items:
             print(f"Setting GItem {i} dragability to False")
             self._items[i].draggable = False
 
     def make_draggable(self):
-        ''' Make the GObject draggable across the canvas '''
+        """ Make the GObject draggable across the canvas """
         for i in self._items:
             print(f"Setting GItem {i} dragability to True")
             self._items[i].draggable = True
@@ -299,23 +328,6 @@ class GObject:
         self._connectable = bool(value)
 
 
-# TODO:
-# TODO:
-# TODO:
-# TODO:
-# TODO:
-# TODO:
-# TODO:
-# TODO: All of the below GObjects need to be converted to use a set of GItems
-# TODO: We need to figure out what a GItem will look like, and then call the
-# TODO: appropriate method to add GItems to a GObject.
-# TODO:
-# TODO:
-# TODO:
-# TODO:
-# TODO:
-# TODO:
-
 class GFoo(GObject):
 
     def __init__(self, *args, **kwargs):
@@ -339,21 +351,25 @@ class GFoo(GObject):
         self._items['line1'].add()
         self._items['line1'].hidden = False
         self._items['line1'].draggable = False
+        self._items['line1'].raisable = True
 
         self._items['line2'] = GLineItem(self.gcanvas, self._x, self._y + 4, self.length, self._tag)
         self._items['line2'].add()
         self._items['line2'].hidden = False
         self._items['line2'].draggable = False
+        self._items['line2'].raisable = True
 
         self._items['line3'] = GLineItem(self.gcanvas, self._x, self._y + 8, self.length, self._tag)
         self._items['line3'].add()
         self._items['line3'].hidden = False
         self._items['line3'].draggable = False
+        self._items['line3'].raisable = True
 
         self._items['line4'] = GLineItem(self.gcanvas, self._x, self._y + 12, self.length, self._tag)
         self._items['line4'].add()
         self._items['line4'].hidden = False
         self._items['line4'].draggable = False
+        self._items['line4'].raisable = True
 
         self._items['oval1'] = GOvalItem(self.gcanvas, self._x, self._y + 16, self.length, self.length, self._tag)
         self._items['oval1'].add()
@@ -412,7 +428,7 @@ class GBufferGate(GObject):
 
 
 class GRect(GObject):
-    ''' Draw Square or Rectangle on a GCanvas '''
+    """ Draw Square or Rectangle on a GCanvas """
 
     def __init__(self, *args, **kwargs):
 
@@ -438,7 +454,7 @@ class GRect(GObject):
 
 
 class GOval(GObject):
-    ''' Draw Oval or Circle on a GCanvas '''
+    """ Draw Oval or Circle on a GCanvas """
 
     def __init__(self, *args, **kwargs):
 
@@ -464,7 +480,7 @@ class GOval(GObject):
 
 
 class GGraphPaper(GObject):
-    ''' Draw Graph Paper '''
+    """ Draw Graph Paper """
 
     def __init__(self, *args, **kwargs):
 
@@ -477,47 +493,57 @@ class GGraphPaper(GObject):
         # Initialize parent GObject class
         super().__init__(initial_x, initial_y, name_tag)
 
-        self.width = width
-        self.height = height
-        self.bg_color = "#eeffee"
+        self._width = width
+        self._height = height
+        self._bg_color = "#eeffee"
 
     def add(self):
-        # Create the canvas items in a hidden state so that we can show them only when we want to
         # Draw the Graph Paper background rectangle using a greenish-white tint
-        self.canvas_item = self.gcanvas.canvas.create_rectangle(self._x, self._y,
-                                                        self._x + self.width,
-                                                        self._y + self.height,
-                                                        fill=self.bg_color,
-                                                        outline=self.bg_color,
-                                                        state='hidden',
-                                                        tag=self._tag)
+        self._items['background_rect'] = GRectItem(
+            self.gcanvas, self._x, self._y, self._x + self._width, self._y + self._height, self._tag)
+        self._items['background_rect'].add()
+        self._items['background_rect'].fill_color = self._bg_color
+        self._items['background_rect'].outline_color = self._bg_color
+        self._items['background_rect'].hidden = False
+        self._items['background_rect'].raisable = False
+        self._items['background_rect'].draggable = False
+        self._items['background_rect'].selectable = False
 
         # Draw the Graph Paper lines.  We draw all of the vertical lines, followed by all of the
         # horizontal lines.  Every 100 pixels (or every 10th line) we draw using a DARKER green, to
         # simulate the classic "Engineer's Graph Paper".
 
+
         # Creates all vertical lines
-        for i in range(self._x, self._x + self.width, 10):
+        for i in range(self._x, self._x + self._width, 10):
             if (i % 100) == 0:
                 line_color = "#aaffaa"
             else:
                 line_color = "#ccffcc"
-            self.gcanvas.canvas.create_line([(i, self._x), (i, self._x + self.height)], fill=line_color, tag=self._tag)
+            #self.gcanvas.canvas.create_line([(i, self._x), (i, self._x + self._height)], fill=line_color, tag=self._tag)
+            points = [(i, self._x), (i, self._x + self._height)]
+
+            self._items['graph_paper_vline'+str(i)] = GLineItem2(self.gcanvas, points, self._tag)
+            self._items['graph_paper_vline'+str(i)].add()
+            self._items['graph_paper_vline'+str(i)].fill_color = line_color
+            self._items['graph_paper_vline'+str(i)].hidden = False
+            self._items['graph_paper_vline'+str(i)].raisable = False
+            self._items['graph_paper_vline'+str(i)].draggable = False
+            self._items['graph_paper_vline'+str(i)].selectable = False
 
         # Creates all horizontal lines
-        for i in range(self._y, self._y + self.height, 10):
+        for i in range(self._y, self._y + self._height, 10):
             if (i % 100) == 0:
                 line_color = "#aaffaa"
             else:
                 line_color = "#ccffcc"
-            self.gcanvas.canvas.create_line([(self._y, i), (self._y + self.width, i)], fill=line_color, tag=self._tag)
-
-        # TODO:  Note, we do not have the "activate_together" tag here, as is used on other GObjects. This
-        # TODO:  is a temporary hack, as we use this GraphPaper as the background, and do not want the
-        # TODO:  on_enter and on_leave events to apply.  We should create a method that allows us to
-        # TODO:  make_highlightable() on any GObject, and then we can choose NOT to for this GObject.
-        # TODO:  Or, better yet, we should make it a property that we can set to True or False.
-
-
-
+            #self.gcanvas.canvas.create_line([(self._y, i), (self._y + self._width, i)], fill=line_color, tag=self._tag)
+            points = [(self._y, i), (self._y + self._width, i)]
+            self._items['graph_paper_hline'+str(i)] = GLineItem2(self.gcanvas, points, self._tag)
+            self._items['graph_paper_hline'+str(i)].add()
+            self._items['graph_paper_hline'+str(i)].fill_color = line_color
+            self._items['graph_paper_hline'+str(i)].hidden = False
+            self._items['graph_paper_hline'+str(i)].raisable = False
+            self._items['graph_paper_hline'+str(i)].draggable = False
+            self._items['graph_paper_hline'+str(i)].selectable = False
 
