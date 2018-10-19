@@ -1,3 +1,4 @@
+import math
 #
 # Starting to work on a major refactor to separate out GItems from GObjects
 # The GItems will manage the individual canvas items, and their properties
@@ -12,6 +13,7 @@ from .gitem import (
     GLineItem2,
     GRectItem,
     GOvalItem,
+    GPolygonItem,
     GBufferGateBody,
 )
 
@@ -88,7 +90,6 @@ class GObject:
     def factory(a_class, *args, **kwargs):
         return a_class(*args, **kwargs)
 
-
     # as GItems will be tagged with the parent name tag, we can continue to scale in the same way (i think)
     def scale(self, x_offset, y_offset, x_scale, y_scale):
         """ scale by scale factor x_scale and y_scale relative to point (x_offset, y_offset) """
@@ -122,13 +123,27 @@ class GObject:
 
 
     def add_mouse_bindings(self):
+        # TODO: Currently, it is assumed that if something is draggable, it is also selectable.  Not sure we want this.
+        # TODO: We should be able to specify the GItems that are draggable (those we can click on and drag the entire
+        # TODO: GObject), while also keeping to the idea that the selection happens at the GObject-level
+        # TODO: the "draggable" property should only be used to specify that a GItem can be clicked-dragged
+        # TODO: Generally (at least in the case of logic gates), we'd always click-drag the body of the gate, while
+        # TODO: the input and output components would not be draggable.  Sames goes for "selectable", so the current
+        # TODO: assumption works for now, so I'll leave it until a case comes up where this doens't work.
+
         # add bindings for selection toggle on/off using Command-Click
-        self.gcanvas.canvas.tag_bind(self._tag + "_draggable", "<Command-ButtonPress-1>", self.on_command_button_press)
+        self.gcanvas.canvas.tag_bind(self._tag + ":draggable", "<Command-ButtonPress-1>", self.on_command_button_press)
 
         # add bindings for click and hold to drag an object
-        self.gcanvas.canvas.tag_bind(self._tag + "_draggable", "<ButtonPress-1>", self.on_button_press)
-        self.gcanvas.canvas.tag_bind(self._tag + "_draggable", "<ButtonRelease-1>", self.on_button_release)
-        self.gcanvas.canvas.tag_bind(self._tag + "_draggable", "<B1-Motion>", self.on_button_motion)
+        self.gcanvas.canvas.tag_bind(self._tag + ":draggable", "<ButtonPress-1>", self.on_button_press)
+        self.gcanvas.canvas.tag_bind(self._tag + ":draggable", "<ButtonRelease-1>", self.on_button_release)
+        self.gcanvas.canvas.tag_bind(self._tag + ":draggable", "<B1-Motion>", self.on_button_motion)
+
+        # add bindings for right-click (could eventually be used for context-sensative menus)
+        # TODO: not used yet, but we may want to use different callbacks to keep the code separate from
+        # TODO: the click-drag-release code.  Otherwise use event.num to detect what button is being pressed.
+        self.gcanvas.canvas.tag_bind(self._tag + ":draggable", "<ButtonPress-2>", self.on_button_press)
+        self.gcanvas.canvas.tag_bind(self._tag + ":draggable", "<ButtonRelease-2>", self.on_button_release)
 
         # add bindings for <Enter> and <Leave> events
         self.gcanvas.canvas.tag_bind(self._tag, "<Enter>", self.on_enter)
@@ -139,12 +154,14 @@ class GObject:
 
     def on_button_press(self, event):
         """ Beginning drag of an object - record the item and its location """
+        print(f"DEBUG: CLICK   Button-{event.num} Item: {event.widget.find_withtag('current')}")
         self._drag_data["item"] = self.gcanvas.canvas.find_closest(event.x, event.y)[0]
         self._drag_data["x"] = event.x
         self._drag_data["y"] = event.y
 
     def on_button_release(self, event):
         """ End drag of an object - reset the drag information """
+        print(f"DEBUG: RELEASE Button-{event.num} Item: {event.widget.find_withtag('current')}")
         self._drag_data["item"] = None
         self._drag_data["x"] = 0
         self._drag_data["y"] = 0
@@ -160,29 +177,52 @@ class GObject:
         delta_x = event.x - self._drag_data["x"]
         delta_y = event.y - self._drag_data["y"]
 
-        # We want to move all sub-objects/items, not just the one we grabbed with .find_closest()
-        # So we move all canvas items tagged with self._tag
+        # Let's start by getting the list of canvas items I'm composed of
+        items_im_composed_of = self.gcanvas.canvas.find_withtag(self._tag)
+        # Another way to get the list of items I'm composed of:
+        #items_im_composed_of = [i.item for i in self._items.values()]
+        #print("DEBUG: self._tag={} items_im_composed_of={}".format(self._tag, items_im_composed_of))
+
         #
-        # We also want to move any items tagged as "selected" which may have been selected by the selection box
-        # However, if self._tag is contained within the selected set, we dont want to move it twice, otherwise
-        # we end up with it moving twice as far on the canvas
+        # We want to move all sub-objects/items, not just the one we clicked on.  So we
+        # move all canvas items tagged with self._tag, which would be the whole GObject
+        #
+        # We also want to move any items tagged as "selected" which may have been selected
+        # by the selection box.  However, if self._tag is contained within the selected set,
+        # we dont want to move it twice, otherwise we end up with it moving twice as far on
+        # the canvas.
         #
         # We have 2 cases to consider:
-        # Are we moving an item that is NOT selected?  If so, just move it.
-        # Or Are we moving an item that IS selected? If so, then move all selected items along with it
-        items_im_composed_of = self.gcanvas.canvas.find_withtag(self._tag)
-        #print("DEBUG: self._tag={} items_im_composed_of={}".format(self._tag, items_im_composed_of))
-        tags_on_1st_item = self.gcanvas.canvas.gettags(items_im_composed_of[0]) # just look at the 1st item
+        #   1) Are we moving an item that is NOT selected?  If so, just move it.
+        #   2) Or Are we moving an item that IS selected? If so, then move all "selected" items,
+        #      which will already include the one we click-dragged
+        #
 
-        # Since all items will have the "selected" tag, we only need to check the 1st one
+        # get all tags on the 1st item in the list/tuple
+        tags_on_1st_item = self.gcanvas.canvas.gettags(items_im_composed_of[0])
+
+        # If one of the items in the GObject has the "selected" tag, they all will.
+        # So, we can just check the 1st item to determine selection status.
         if "selected" in tags_on_1st_item:
             self.raise_with_tag("selected")
-            self.gcanvas.canvas.move("selected", delta_x, delta_y)
+            self.gcanvas.canvas.move("selected", delta_x, delta_y)  # Case #1
         else:
-            self.gcanvas.canvas.move(self._tag, delta_x, delta_y)
+            self.gcanvas.canvas.move(self._tag, delta_x, delta_y)   # Case #2
 
-        # force canvas to refresh
-        self.gcanvas.canvas.update_idletasks()
+        # TODO: Something to think about -
+        # TODO:
+        # TODO: Looking at the above block, do we want to manipulate items directly (possibly for better performance)
+        # TODO: Or do we want to make methods on the GItem objects to call to accomplish the same thing?
+        # TODO:
+        # TODO: All of the bindings are at the GObject-level, so I'm not sure we'll be able to fully get away from
+        # TODO: direct manipulation of canvas items, but we should consider if we want to remember the current position
+        # TODO: of a GItem, we'd have to use the interface to that object, rather than bypassing it and going directly
+        # TODO: to the canvas items themselves.  Just something to keep in mind as we polish the code and object
+        # TODO: interfaces.
+        # TODO:
+        # TODO: Ideally, we shouldn't rely on the item tags as a form of communication between the GObject and GItem,
+        # TODO: but instead, the GItem should have a fully capable interface to allow us to do everything we need to do.
+        # TODO:
 
         # record the new position
         self._drag_data["x"] = event.x
@@ -190,7 +230,7 @@ class GObject:
 
         # update status var
         if self.gcanvas.status_var:
-            self.gcanvas.status_var.set("Dragging something...")
+            self.gcanvas.status_var.set(f"Dragging {self._tag} ...")
 
     def on_command_button_press(self, event):
         """ handle Command-Click on a GObject """
@@ -223,13 +263,13 @@ class GObject:
     def set_selected(self):
         if self.selectable:
             self.selected = True
-            self.gcanvas.canvas.itemconfigure(self._tag + "_draggable", fill=self.selected_fill_color)
+            self.gcanvas.canvas.itemconfigure(self._tag + ":draggable", fill=self.selected_fill_color)
             self.gcanvas.canvas.addtag_withtag("selected", self._tag)  # add "selected" tag to item
 
     def clear_selected(self):
         if self.selectable:
             self.selected = False
-            self.gcanvas.canvas.itemconfigure(self._tag + "_draggable", fill=self.fill_color)
+            self.gcanvas.canvas.itemconfigure(self._tag + ":draggable", fill=self.fill_color)
             self.gcanvas.canvas.dtag(self._tag, "selected") # delete/remove the "selected" tag
 
     def toggle_selected(self):
@@ -259,19 +299,43 @@ class GObject:
             self.clear_selected()
 
     def get_item_by_id(self, id):
-        # find the key in self._items that has value.item == id
+        """
+        find the key in self._items that has value.item == id
+        This allows us to map canvas item ID to the actual GItem object
+        In other words, "Get GItem object ref by canvas item ID"
+        """
         for i in self._items:
             current_id = self._items[i].item
-            print(f"DEBUG: get_item_by_id({id}) --> Checking {current_id}")
+            #print(f"DEBUG: get_item_by_id({id}) --> Checking {current_id}")
             if current_id in id or current_id == id:
-                print(f"DEBUG: get_item_by_id({id}) --> Found")
+                #print(f"DEBUG: get_item_by_id({id}) --> Found")
                 return self._items[i]
         # if we get here, it wasn't found
-        print(f"DEBUG: get_item_by_id({id}) --> Not found")
+        #print(f"DEBUG: get_item_by_id({id}) --> Not found")
         return None
 
     def on_enter(self, event):
-        # We want to raise canvas items, but only based on an attribute of the GItem, say, called "raisable" or "auto_raise"
+        """ handle <Enter> events for GItem, including highlighting and raising """
+
+        # TODO:
+        # TODO:  There is a lot of shared logic at the head of on_enter() and on_leave(), so let's look at
+        # TODO:  implementing some helper functions to DRY this out a bit.  One thing that would be helpful
+        # TODO:  would be to take the entered_item_id, and then extract all the needed tagging info into a
+        # TODO:  dictionary, so we can easily check things like highlight_groups, etc.
+        # TODO:
+        # TODO:  Also keep in mind, we want to be able to extract info from the tags quickly.  Currently we
+        # TODO:  are tagging highlight_groups as a colon-separated thing like this:
+        # TODO:
+        # TODO:     highlight_group:group_name
+        # TODO:
+        # TODO:  ...where the "group_name" is just an arbitrary string we use to identify multiple groups
+        # TODO:  within the same GObject.  If it becomes too much of a performance hit extracting that data,
+        # TODO:  we could instead support only a single highlight group, and just look for that tag on each
+        # TODO:  item, and if it exists, all of those items are in the group.  This would mean we could only
+        # TODO:  have a single group of items that could be highlighted together per GObject, but this is
+        # TODO:  probably fine.  So far I've not encountered the need/desire to have multiple multi-item
+        # TODO:  groups.
+        # TODO:
 
         # convert from screen coords to canvas coords
         #canvas = event.widget
@@ -283,18 +347,18 @@ class GObject:
         tags_on_id = self.gcanvas.canvas.gettags(entered_item_id)
 
         if self._tag != 'BACKGROUND':
-            print(f"on_enter: item {entered_item_id} with tags {tags_on_id}: ")
+            print(f"DEBUG: on_enter(): item {entered_item_id} with tags {tags_on_id}: ")
 
             # I want to be able to get the GItem from entered_item_id, but need a mapping
             entered_item = self.get_item_by_id(entered_item_id)
             if entered_item:
-                print(f"Entered GItem: {entered_item} with id {entered_item.item}")
+                print(f"DEBUG: on_enter(): Entered GItem: {entered_item} with id {entered_item.item}")
 
             highlight_group_items = []
             for i in self._items:
                 id = self._items[i].item
                 tags_on_this_id = self.gcanvas.canvas.gettags(id)
-                print(f"on_enter:     --> {i}: {id}: {tags_on_this_id}")
+                print(f"DEBUG: on_enter():     --> {i}: {id}: {tags_on_this_id}")
 
             if "raisable" in tags_on_id:
                 self.gcanvas.canvas.tag_raise(self._tag)
@@ -303,7 +367,10 @@ class GObject:
             if "highlightable" in tags_on_id:
                 # we need to use the active_outline_color and active_outline_width of the GItem, not the GObject
                 # how do we get the corresponding GItem, knowing only the item ID?
-                self.gcanvas.canvas.itemconfigure(entered_item_id, outline=entered_item.active_outline_color, width=entered_item.active_outline_width)
+                self.gcanvas.canvas.itemconfigure(
+                    entered_item_id,
+                    outline=entered_item.active_outline_color,
+                    width=entered_item.active_outline_width)
 
             # we also want to check for tag "activate_together", and if found, we want to highlight all
             # items that are also tagged with "activate_together".  For example, in a NotGate, we want
@@ -325,15 +392,18 @@ class GObject:
 
         if self._tag != 'BACKGROUND':
             left_item = self.get_item_by_id(left_item_id)
-            print(f"on_leave: item {left_item_id} with tags {tags_on_id}: ")
+            print(f"DEBUG: on_leave(): item {left_item_id} with tags {tags_on_id}: ")
             for i in self._items:
                 id = self._items[i].item
                 tags_on_this_id = self.gcanvas.canvas.gettags(id)
-                print(f"on_leave:     --> {i}: {id}: {tags_on_this_id}")
+                print(f"DEBUG: on_leave():     --> {i}: {id}: {tags_on_this_id}")
 
             # De-highlight the item where the event was triggered by manually setting outline and width
             if "highlightable" in tags_on_id:
-                self.gcanvas.canvas.itemconfigure(left_item_id, outline=left_item.outline_color, width=left_item.outline_width)
+                self.gcanvas.canvas.itemconfigure(
+                    left_item_id,
+                    outline=left_item.outline_color,
+                    width=left_item.outline_width)
 
     def hide(self):
         self.gcanvas.canvas.itemconfigure(self.canvas_item, state="hidden")
@@ -349,13 +419,13 @@ class GObject:
     def make_undraggable(self):
         """ Make the GObject undraggable (immovable) across the canvas """
         for i in self._items:
-            print(f"Setting GItem {i} dragability to False")
+            print(f"DEBUG: Setting GItem {i} dragability to False")
             self._items[i].draggable = False
 
     def make_draggable(self):
         """ Make the GObject draggable across the canvas """
         for i in self._items:
-            print(f"Setting GItem {i} dragability to True")
+            print(f"DEBUG: Setting GItem {i} dragability to True")
             self._items[i].draggable = True
 
     def set_outline_width(self, width):
@@ -610,6 +680,91 @@ class GNotGate(GObject):
         self._items['body'].highlight_group('body_plus_not_bubble')
 
 
+class GAndGate(GObject):
+    """ Draw AND Gate on the GCanvas """
+
+    def __init__(self, *args, **kwargs):
+        initial_x = args[0]
+        initial_y = args[1]
+        name_tag = kwargs['name']
+
+        # Initialize parent GObject class
+        super().__init__(initial_x, initial_y, name_tag)
+
+    def add(self):
+
+        x = self._x
+        y = self._y
+
+        self._points = []
+        self._points.extend((x, y))  # first point in polygon
+        self._points.extend((x + 29, y))
+
+        # scale the unit circle by 30, as that's the distance from the center of the circle to the arc
+        # See Also: https://en.wikipedia.org/wiki/Unit_circle
+        for angle in range(-90, 90):
+            arc_x = (math.cos(math.radians(angle)) * 30) + (x + 29)
+            arc_y = (math.sin(math.radians(angle)) * 30) + (y + 30)
+            self._points.extend((arc_x, arc_y))
+
+        self._points.extend((x, y + 60))  # last point in polygon, which connects back to the 1st point
+
+        self._items['output_line'] = GLineItem(self.gcanvas, self._x + 59, self._y + 30, 10, self._tag)
+        self._items['output_line'].add()
+        self._items['output_line'].hidden = False
+        self._items['output_line'].draggable = False
+
+        self._items['output_dot'] = GOvalItem(self.gcanvas, self._x + 69, self._y + 25, 10, 10, self._tag)
+        self._items['output_dot'].add()
+        self._items['output_dot'].fill_color = 'white'
+        self._items['output_dot'].outline_color = 'blue'
+        self._items['output_dot'].active_outline_color = 'orange'
+        self._items['output_dot'].outline_width = 2.0
+        self._items['output_dot'].active_outline_width = 5.0
+        self._items['output_dot'].hidden = False
+        self._items['output_dot'].draggable = False
+
+        self._items['input_line1'] = GLineItem(self.gcanvas, self._x, self._y + 17, -10, self._tag)
+        self._items['input_line1'].add()
+        self._items['input_line1'].hidden = False
+        self._items['input_line1'].draggable = False
+
+        self._items['input_dot1'] = GOvalItem(self.gcanvas, self._x - 20, self._y + 12, 10, 10, self._tag)
+        self._items['input_dot1'].add()
+        self._items['input_dot1'].fill_color = 'white'
+        self._items['input_dot1'].outline_color = 'blue'
+        self._items['input_dot1'].active_outline_color = 'orange'
+        self._items['input_dot1'].outline_width = 2.0
+        self._items['input_dot1'].active_outline_width = 5.0
+        self._items['input_dot1'].hidden = False
+        self._items['input_dot1'].draggable = False
+
+        self._items['input_line2'] = GLineItem(self.gcanvas, self._x, self._y + 43, -10, self._tag)
+        self._items['input_line2'].add()
+        self._items['input_line2'].hidden = False
+        self._items['input_line2'].draggable = False
+
+        self._items['input_dot2'] = GOvalItem(self.gcanvas, self._x - 20, self._y + 38, 10, 10, self._tag)
+        self._items['input_dot2'].add()
+        self._items['input_dot2'].fill_color = 'white'
+        self._items['input_dot2'].outline_color = 'blue'
+        self._items['input_dot2'].active_outline_color = 'orange'
+        self._items['input_dot2'].outline_width = 2.0
+        self._items['input_dot2'].active_outline_width = 5.0
+        self._items['input_dot2'].hidden = False
+        self._items['input_dot2'].draggable = False
+
+        self._items['body'] = GPolygonItem(self.gcanvas, self._points, self._tag)
+        self._items['body'].add()
+        self._items['body'].fill_color = 'white'
+        self._items['body'].outline_color = 'blue'
+        self._items['body'].active_outline_color = 'orange'
+        self._items['body'].outline_width = 2.0
+        self._items['body'].active_outline_width = 5.0
+        self._items['body'].hidden = False
+        self._items['body'].draggable = True
+
+
 class GRect(GObject):
     """ Draw Square or Rectangle on a GCanvas """
 
@@ -706,16 +861,13 @@ class GGraphPaper(GObject):
         # horizontal lines.  Every 100 pixels (or every 10th line) we draw using a DARKER green, to
         # simulate the classic "Engineer's Graph Paper".
 
-
         # Creates all vertical lines
         for i in range(self._x, self._x + self._width, 10):
             if (i % 100) == 0:
                 line_color = "#aaffaa"
             else:
                 line_color = "#ccffcc"
-            #self.gcanvas.canvas.create_line([(i, self._x), (i, self._x + self._height)], fill=line_color, tag=self._tag)
             points = [(i, self._x), (i, self._x + self._height)]
-
             self._items['graph_paper_vline'+str(i)] = GLineItem2(self.gcanvas, points, self._tag)
             self._items['graph_paper_vline'+str(i)].add()
             self._items['graph_paper_vline'+str(i)].fill_color = line_color
@@ -732,7 +884,6 @@ class GGraphPaper(GObject):
                 line_color = "#aaffaa"
             else:
                 line_color = "#ccffcc"
-            #self.gcanvas.canvas.create_line([(self._y, i), (self._y + self._width, i)], fill=line_color, tag=self._tag)
             points = [(self._y, i), (self._y + self._width, i)]
             self._items['graph_paper_hline'+str(i)] = GLineItem2(self.gcanvas, points, self._tag)
             self._items['graph_paper_hline'+str(i)].add()

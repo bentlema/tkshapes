@@ -9,6 +9,7 @@ from .gobject import (
     GRect,
     GBufferGate,
     GNotGate,
+    GAndGate,
 )
 
 from .gitem import (
@@ -16,6 +17,7 @@ from .gitem import (
     GLineItem2,
     GRectItem,
     GOvalItem,
+    GPolygonItem,
     GBufferGateBody,
 )
 

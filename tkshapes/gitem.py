@@ -159,12 +159,12 @@ class GItem:
 
     @draggable.setter
     def draggable(self, value):
-        """ Tag the canvas items as "draggable" so that we can drag them around the canvas """
+        """ Tag the canvas item as "draggable" so that we can initiate a click-drag from it """
         self._draggable = bool(value)
         if value:
-            self._gcanvas.canvas.addtag_withtag(self._tag + "_draggable", self._canvas_item)
+            self._gcanvas.canvas.addtag_withtag(self._tag + ":draggable", self._canvas_item)
         else:
-            self._gcanvas.canvas.dtag(self._canvas_item, self._tag + "_draggable")
+            self._gcanvas.canvas.dtag(self._canvas_item, self._tag + ":draggable")
 
     @property
     def clickable(self):
@@ -362,5 +362,35 @@ class GOvalItem(GItem):
 
         # Tag the specific canvas items we want to activate (highlight) together
         #self._gcanvas.canvas.addtag_withtag(self._tag + "activate_together", self._canvas_item)
+        self.highlightable = True
+
+
+class GPolygonItem(GItem):
+    """ Draw Polygon on a GCanvas """
+
+    def __init__(self, gcanvas, points, name_tag=None):
+
+        initial_x = points[0]
+        initial_y = points[1]
+
+        super().__init__(gcanvas, initial_x, initial_y, name_tag)
+
+        self._points = points
+
+    def add(self):
+        self._canvas_item = self._gcanvas.canvas.create_polygon(
+            self._points,
+            outline=self._outline_color,
+            activeoutline=self._outline_color,
+            fill=self._fill_color,
+            width=self._outline_width,
+            activewidth=self._outline_width,
+            state=self._item_state,
+            tags=self._tag)
+
+        # the item should be raisable by default unless overridden in the GObject
+        self.raisable = True
+
+        # Tag the specific canvas items we want to activate (highlight) together
         self.highlightable = True
 
