@@ -40,7 +40,7 @@ class GItem:
         self._draggable = True            # if the GItem can be click-Dragged
         self._clickable = True            # if the GItem can be clicked
         self._connectable = False         # if the GItem can be connected to another GItem
-
+        self._highlightable = True        # if the GItem is highlightable (only GItems with "outline" are)
         self._raisable = True             # if the GItem should be raised upon <Enter> event
 
     def hide(self):
@@ -50,6 +50,11 @@ class GItem:
     def show(self):
         # Setting my own property
         self.hidden = False
+
+    # maybe convert this to a property too
+    def highlight_group(self, name):
+        print(f"Adding {name} tag to {self._canvas_item}")
+        self._gcanvas.canvas.addtag_withtag("highlight_group:" + name, self._canvas_item)
 
     @property
     def item(self):
@@ -88,6 +93,16 @@ class GItem:
         self._outline_color = value
         if self._canvas_item:
             self._gcanvas.canvas.itemconfigure(self._canvas_item, outline=value)
+
+    @property
+    def active_outline_color(self):
+        return self._active_outline_color
+
+    @active_outline_color.setter
+    def active_outline_color(self, value):
+        self._active_outline_color = value
+        if self._canvas_item:
+            self._gcanvas.canvas.itemconfigure(self._canvas_item, activeoutline=value)
 
     @property
     def fill_color(self):
@@ -182,6 +197,18 @@ class GItem:
             #print(f"Deleting 'raisable' on canvas item {self._canvas_item}")
             self._gcanvas.canvas.dtag(self._canvas_item, "raisable")
 
+    @property
+    def highlightable(self):
+        return self._highlightable
+
+    @highlightable.setter
+    def highlightable(self, value):
+        self._highlightable = bool(value)
+        if value:
+            self._gcanvas.canvas.addtag_withtag("highlightable", self._canvas_item)
+        else:
+            self._gcanvas.canvas.dtag(self._canvas_item, "highlightable")
+
 # TODO: GLineItem and GLineItem2 both need to be re-done to support multiple ways of creating lines
 # TODO:  Really, GLineItem is currently a GHorizontalSegment and needs to go away, and be generalized
 # TODO: into the real GLineItem, currently called GLineItem2.
@@ -211,12 +238,13 @@ class GLineItem(GItem):
             self.coords,
             fill=self._outline_color,
             width=self.outline_width,
-            activewidth=self.active_outline_width,
+            activewidth=self.outline_width,
             state=self._item_state,
             tags=self._tag)
 
         # the item should NOT be raisable by default unless overridden in the GObject
         self.raisable = False
+        self.highlightable = False
 
 
 class GLineItem2(GItem):
@@ -238,12 +266,13 @@ class GLineItem2(GItem):
             self.coords,
             fill=self._outline_color,
             width=self.outline_width,
-            activewidth=self.active_outline_width,
+            activewidth=self.outline_width,
             state=self._item_state,
             tags=self._tag)
 
         # the item should NOT be raisable by default unless overridden in the GObject
         self.raisable = False
+        self.highlightable = False
 
 
 class GBufferGateBody(GItem):
@@ -262,10 +291,10 @@ class GBufferGateBody(GItem):
         self._canvas_item = self._gcanvas.canvas.create_polygon(
             points,
             outline=self._outline_color,
-            activeoutline=self._active_outline_color,
+            activeoutline=self._outline_color,
             fill=self._fill_color,
-            width=self.outline_width,
-            activewidth=self.active_outline_width,
+            width=self.outline_width,        # property
+            activewidth=self.outline_width,  # property
             state=self._item_state,
             tags=self._tag)
 
@@ -274,7 +303,8 @@ class GBufferGateBody(GItem):
 
         # will leave this here for now, but I think I'll come up with a differet/better way to control highlight groups
         # Tag the specific canvas items we want to activate (highlight) together
-        self._gcanvas.canvas.addtag_withtag(self._tag + "activate_together", self._canvas_item)
+        #self._gcanvas.canvas.addtag_withtag(self._tag + "activate_together", self._canvas_item)
+        self.highlightable = True
 
 
 class GRectItem(GItem):
@@ -291,10 +321,10 @@ class GRectItem(GItem):
             self._x, self._y,
             self._x + self.width, self._y + self.height,
             outline=self._outline_color,
-            activeoutline=self._active_outline_color,
+            activeoutline=self._outline_color,
             fill=self._fill_color,
             width=self._outline_width,
-            activewidth=self._active_outline_width,
+            activewidth=self._outline_width,
             state=self._item_state,
             tags=self._tag)
 
@@ -302,7 +332,8 @@ class GRectItem(GItem):
         self.raisable = True
 
         # Tag the specific canvas items we want to activate (highlight) together
-        self._gcanvas.canvas.addtag_withtag(self._tag + "activate_together", self._canvas_item)
+        #self._gcanvas.canvas.addtag_withtag(self._tag + "activate_together", self._canvas_item)
+        self.highlightable = True
 
 
 class GOvalItem(GItem):
@@ -319,10 +350,10 @@ class GOvalItem(GItem):
             self._x, self._y,
             self._x + self.width, self._y + self.height,
             outline=self._outline_color,
-            activeoutline=self._active_outline_color,
+            activeoutline=self._outline_color,
             fill=self._fill_color,
             width=self._outline_width,
-            activewidth=self._active_outline_width,
+            activewidth=self._outline_width,
             state=self._item_state,
             tags=self._tag)
 
@@ -330,5 +361,6 @@ class GOvalItem(GItem):
         self.raisable = True
 
         # Tag the specific canvas items we want to activate (highlight) together
-        self._gcanvas.canvas.addtag_withtag(self._tag + "activate_together", self._canvas_item)
+        #self._gcanvas.canvas.addtag_withtag(self._tag + "activate_together", self._canvas_item)
+        self.highlightable = True
 

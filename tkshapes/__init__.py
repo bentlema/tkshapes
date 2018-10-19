@@ -8,6 +8,7 @@ from .gobject import (
     GOval,
     GRect,
     GBufferGate,
+    GNotGate,
 )
 
 from .gitem import (

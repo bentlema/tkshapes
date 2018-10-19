@@ -12,6 +12,7 @@ from tkshapes import (
     GRect,
     GOval,
     GBufferGate,
+    GNotGate,
 )
 
 root = tk.Tk()
@@ -43,12 +44,14 @@ gcanvas.register_gobject('GFoo', GFoo)
 gcanvas.register_gobject('GRect', GRect)
 gcanvas.register_gobject('GOval', GOval)
 gcanvas.register_gobject('GBufferGate', GBufferGate)
+gcanvas.register_gobject('GNotGate', GNotGate)
 
 # The 'BACKGROUND' name will associate this GObject with the immovable background items
 graph_paper = gcanvas.create('GGraphPaper', 0, 0, 10000, 10000, name="BACKGROUND")
 graph_paper.set_outline_width(2)
 graph_paper.set_active_outline_width(0)
-graph_paper.add_mouse_bindings()
+# I dont think we need any of these bindings on the background
+#graph_paper.add_mouse_bindings()
 graph_paper.show()
 
 # GObjects are "spawned" into existence by the create() method on the GCanvas
@@ -112,6 +115,10 @@ foo3.show()
 gate1 = gcanvas.create('GBufferGate', 5100, 5100, name="Gate1")
 gate1.add_mouse_bindings()
 gate1.show()
+
+gate2 = gcanvas.create('GNotGate', 5100, 5175, name="Gate2")
+gate2.add_mouse_bindings()
+gate2.show()
 
 # Print some debug info
 gcanvas.known_types()

@@ -38,10 +38,23 @@ class GObject:
         # TODO: GItems instead.
         self.canvas_item = None
 
+        # TODO: The GObject needs to keep track of the GItems it contains
         # TODO: IN-PROGRESS: Let's keep track of the GItems here.
         # TODO: Each GItem will have its own item-level name, so let's use a Dictionary
         # TODO: Key will be the GItem name, and value will be the actual object
         self._items = {}
+
+        # TODO: We also need a mapping of canvas Item ID --> GItem, as there are cases
+        # TODO: Where we have a canvas item ID, but need to know the GItem in order to
+        # TODO: check some properties of it.  We might be able to get around this if
+        # TODO: we move all lower-level canvas interaction within the GItems, but that
+        # TODO: doesn't seem like an easy change...will think on it.
+        # TODO:
+        # TODO: Okay, i implemented get_item_by_id, but it's a for loop, and I'm not using
+        # TODO: the below dictionary.  Instead i'm looping through self._items, which seems
+        # TODO: okay for now, but I'd rather an O(n) function, so need to build out this
+        # TODO: dictionary when each GItem is created, and I will re-write get_item_by_id()
+        self._canvas_item_id_to_gitem = {}
 
         # Move to GItem?
         # this data is used to keep track of a canvas object being dragged
@@ -58,9 +71,9 @@ class GObject:
 
         # Move to GItem?
         # current line width and active line width (changes when zooming in/out to maintain proper ratio)
-        self.outline_width = 2
+        self.outline_width = 2.0
         self.outline_color = 'blue'
-        self.active_outline_width = 5
+        self.active_outline_width = 5.0
         self.active_outline_color = 'orange'
 
         # Move to GItem?
@@ -84,7 +97,7 @@ class GObject:
         self.gcanvas.canvas.scale(self._tag, x_offset, y_offset, x_scale, y_scale)
 
         # in theory, we could scale at different rates horizontally vs vertically, but
-        # line widths are constant accross the whole item, so we just pick the x_scale
+        # line widths are constant across the whole item, so we just pick the x_scale
         sf = x_scale
 
         # TODO: Figure out a way to speed this up.  As we get lots of GItems, zooming
@@ -92,18 +105,20 @@ class GObject:
         # TODO: GraphPaper adds a ton of GItems, so consider how we might get around
         # TODO: that.  Maybe we should write a special GCanvasBackground object, and
         # TODO: then we could optimize zooming by keeping all of those GItems out of
-        # TODO: the dictionary of GItems.
+        # TODO: the dictionary of GItems. For now, let's skip scaling the BACKGROUND
+        # TODO: items.
 
-        # scale my outline and active_outline widths
-        for gitem_name in self._items:
-            gitem = self._items[gitem_name]
-            current_width = gitem.outline_width
-            current_activewidth = gitem.active_outline_width
-            new_width = float(current_width) * sf
-            new_activewidth = float(current_activewidth) * sf
-            gitem.outline_width = new_width
-            gitem.active_outline_width = new_activewidth
-            #print(f"{sf} {gitem_name}({gitem.item}) new width {new_width} new active width {new_activewidth}")
+        if self._tag != "BACKGROUND":  #  <-- Temp hack to speed up zooming
+            # scale my outline and active_outline widths
+            for gitem_name in self._items:
+                gitem = self._items[gitem_name]
+                current_width = gitem.outline_width
+                current_activewidth = gitem.active_outline_width
+                new_width = float(current_width) * sf
+                new_activewidth = float(current_activewidth) * sf
+                gitem.outline_width = new_width
+                gitem.active_outline_width = new_activewidth
+                #print(f"{sf} {gitem_name}({gitem.item}) new width {new_width} new active width {new_activewidth}")
 
 
     def add_mouse_bindings(self):
@@ -115,9 +130,9 @@ class GObject:
         self.gcanvas.canvas.tag_bind(self._tag + "_draggable", "<ButtonRelease-1>", self.on_button_release)
         self.gcanvas.canvas.tag_bind(self._tag + "_draggable", "<B1-Motion>", self.on_button_motion)
 
-        # add bindings for highlighting upon <Enter> and <Leave> events
-        self.gcanvas.canvas.tag_bind(self._tag + "activate_together", "<Enter>", self.on_enter)
-        self.gcanvas.canvas.tag_bind(self._tag + "activate_together", "<Leave>", self.on_leave)
+        # add bindings for <Enter> and <Leave> events
+        self.gcanvas.canvas.tag_bind(self._tag, "<Enter>", self.on_enter)
+        self.gcanvas.canvas.tag_bind(self._tag, "<Leave>", self.on_leave)
 
         # add binding to handle Selection virtual events from a selection box
         self.gcanvas.canvas.bind("<<Selection>>", self.on_selection_event, "+")
@@ -165,6 +180,9 @@ class GObject:
             self.gcanvas.canvas.move("selected", delta_x, delta_y)
         else:
             self.gcanvas.canvas.move(self._tag, delta_x, delta_y)
+
+        # force canvas to refresh
+        self.gcanvas.canvas.update_idletasks()
 
         # record the new position
         self._drag_data["x"] = event.x
@@ -240,23 +258,82 @@ class GObject:
         else:
             self.clear_selected()
 
+    def get_item_by_id(self, id):
+        # find the key in self._items that has value.item == id
+        for i in self._items:
+            current_id = self._items[i].item
+            print(f"DEBUG: get_item_by_id({id}) --> Checking {current_id}")
+            if current_id in id or current_id == id:
+                print(f"DEBUG: get_item_by_id({id}) --> Found")
+                return self._items[i]
+        # if we get here, it wasn't found
+        print(f"DEBUG: get_item_by_id({id}) --> Not found")
+        return None
+
     def on_enter(self, event):
         # We want to raise canvas items, but only based on an attribute of the GItem, say, called "raisable" or "auto_raise"
 
         # convert from screen coords to canvas coords
-        canvas = event.widget
-        x = canvas.canvasx(event.x)
-        y = canvas.canvasy(event.y)
-        entered_item_id = self.gcanvas.canvas.find_closest(x, y)[0]
-        tags_on_id = self.gcanvas.canvas.gettags(entered_item_id)
-        #print(f"{x}x{y} item {entered_item_id} with tags {tags_on_id}: ")
-        if "raisable" in tags_on_id:
-            self.gcanvas.canvas.tag_raise(self._tag)
+        #canvas = event.widget
+        #x = canvas.canvasx(event.x)
+        #y = canvas.canvasy(event.y)
+        #entered_item_id = self.gcanvas.canvas.find_closest(x, y)[0]
+        entered_item_id = self.gcanvas.canvas.find_withtag('current')
 
-        self.gcanvas.canvas.itemconfigure(self.canvas_item, outline=self.active_outline_color, width=self.active_outline_width)
+        tags_on_id = self.gcanvas.canvas.gettags(entered_item_id)
+
+        if self._tag != 'BACKGROUND':
+            print(f"on_enter: item {entered_item_id} with tags {tags_on_id}: ")
+
+            # I want to be able to get the GItem from entered_item_id, but need a mapping
+            entered_item = self.get_item_by_id(entered_item_id)
+            if entered_item:
+                print(f"Entered GItem: {entered_item} with id {entered_item.item}")
+
+            highlight_group_items = []
+            for i in self._items:
+                id = self._items[i].item
+                tags_on_this_id = self.gcanvas.canvas.gettags(id)
+                print(f"on_enter:     --> {i}: {id}: {tags_on_this_id}")
+
+            if "raisable" in tags_on_id:
+                self.gcanvas.canvas.tag_raise(self._tag)
+
+            # Highlight the item where the event was triggered by manually setting outline and width
+            if "highlightable" in tags_on_id:
+                # we need to use the active_outline_color and active_outline_width of the GItem, not the GObject
+                # how do we get the corresponding GItem, knowing only the item ID?
+                self.gcanvas.canvas.itemconfigure(entered_item_id, outline=entered_item.active_outline_color, width=entered_item.active_outline_width)
+
+            # we also want to check for tag "activate_together", and if found, we want to highlight all
+            # items that are also tagged with "activate_together".  For example, in a NotGate, we want
+            # to highlight the body of the gate, and also the little bubble up front indicating the Not.
+            # 1) check for the highlight_group:<name> tag on the item entered
+            # 2) if it exists, then check to see what other items have the same tag
+            # 3) then update all of those items to be highlighted
 
     def on_leave(self, event):
-        self.gcanvas.canvas.itemconfigure(self.canvas_item, outline=self.outline_color, width=self.outline_width)
+        # convert from screen coords to canvas coords
+        #canvas = event.widget
+        #x = canvas.canvasx(event.x)
+        #y = canvas.canvasy(event.y)
+        # For some reason the entered_item_id isn't always correct
+        # but when i check the tags, I see the 'current' tag is always where i expect
+        #left_item_id = self.gcanvas.canvas.find_closest(x, y)[0]
+        left_item_id = self.gcanvas.canvas.find_withtag('current')
+        tags_on_id = self.gcanvas.canvas.gettags(left_item_id)
+
+        if self._tag != 'BACKGROUND':
+            left_item = self.get_item_by_id(left_item_id)
+            print(f"on_leave: item {left_item_id} with tags {tags_on_id}: ")
+            for i in self._items:
+                id = self._items[i].item
+                tags_on_this_id = self.gcanvas.canvas.gettags(id)
+                print(f"on_leave:     --> {i}: {id}: {tags_on_this_id}")
+
+            # De-highlight the item where the event was triggered by manually setting outline and width
+            if "highlightable" in tags_on_id:
+                self.gcanvas.canvas.itemconfigure(left_item_id, outline=left_item.outline_color, width=left_item.outline_width)
 
     def hide(self):
         self.gcanvas.canvas.itemconfigure(self.canvas_item, state="hidden")
@@ -373,6 +450,11 @@ class GFoo(GObject):
 
         self._items['oval1'] = GOvalItem(self.gcanvas, self._x, self._y + 16, self.length, self.length, self._tag)
         self._items['oval1'].add()
+        self._items['oval1'].fill_color = 'white'
+        self._items['oval1'].outline_color = 'blue'
+        self._items['oval1'].active_outline_color = 'orange'
+        self._items['oval1'].outline_width = 2.0
+        self._items['oval1'].active_outline_width = 5.0
         self._items['oval1'].hidden = False
         self._items['oval1'].draggable = True
         self._items['oval1'].selectable = True
@@ -398,33 +480,134 @@ class GBufferGate(GObject):
 
         self._items['output_dot'] = GOvalItem(self.gcanvas, self._x + 68, self._y + 23, 10, 10, self._tag)
         self._items['output_dot'].add()
+        self._items['output_dot'].fill_color = 'white'
+        self._items['output_dot'].outline_color = 'blue'
+        self._items['output_dot'].active_outline_color = 'orange'
+        self._items['output_dot'].outline_width = 2.0
+        self._items['output_dot'].active_outline_width = 5.0
         self._items['output_dot'].hidden = False
         self._items['output_dot'].draggable = False
 
-        self._items['input_line1'] = GLineItem(self.gcanvas, self._x, self._y + 19, -10, self._tag)
+        self._items['input_line1'] = GLineItem(self.gcanvas, self._x, self._y + 18, -10, self._tag)
         self._items['input_line1'].add()
         self._items['input_line1'].hidden = False
         self._items['input_line1'].draggable = False
 
-        self._items['input_dot1'] = GOvalItem(self.gcanvas, self._x - 20, self._y + 14, 10, 10, self._tag)
+        self._items['input_dot1'] = GOvalItem(self.gcanvas, self._x - 20, self._y + 13, 10, 10, self._tag)
         self._items['input_dot1'].add()
+        self._items['input_dot1'].fill_color = 'white'
+        self._items['input_dot1'].outline_color = 'blue'
+        self._items['input_dot1'].active_outline_color = 'orange'
+        self._items['input_dot1'].outline_width = 2.0
+        self._items['input_dot1'].active_outline_width = 5.0
         self._items['input_dot1'].hidden = False
         self._items['input_dot1'].draggable = False
 
-        self._items['input_line2'] = GLineItem(self.gcanvas, self._x, self._y + 37, -10, self._tag)
+        self._items['input_line2'] = GLineItem(self.gcanvas, self._x, self._y + 38, -10, self._tag)
         self._items['input_line2'].add()
         self._items['input_line2'].hidden = False
         self._items['input_line2'].draggable = False
 
-        self._items['input_dot2'] = GOvalItem(self.gcanvas, self._x - 20, self._y + 32, 10, 10, self._tag)
+        self._items['input_dot2'] = GOvalItem(self.gcanvas, self._x - 20, self._y + 33, 10, 10, self._tag)
         self._items['input_dot2'].add()
+        self._items['input_dot2'].fill_color = 'white'
+        self._items['input_dot2'].outline_color = 'blue'
+        self._items['input_dot2'].active_outline_color = 'orange'
+        self._items['input_dot2'].outline_width = 2.0
+        self._items['input_dot2'].active_outline_width = 5.0
         self._items['input_dot2'].hidden = False
         self._items['input_dot2'].draggable = False
 
         self._items['body'] = GBufferGateBody(self.gcanvas, self._x, self._y, self._tag)
         self._items['body'].add()
+        self._items['body'].fill_color = 'white'
+        self._items['body'].outline_color = 'blue'
+        self._items['body'].active_outline_color = 'orange'
+        self._items['body'].outline_width = 2.0
+        self._items['body'].active_outline_width = 5.0
         self._items['body'].hidden = False
         self._items['body'].draggable = True
+
+
+class GNotGate(GObject):
+
+    def __init__(self, *args, **kwargs):
+
+        initial_x = args[0]
+        initial_y = args[1]
+        name_tag = kwargs['name']
+
+        # Initialize parent GObject class
+        super().__init__(initial_x, initial_y, name_tag)
+
+    def add(self):
+
+        self._items['output_line'] = GLineItem(self.gcanvas, self._x + 66, self._y + 28, 10, self._tag)
+        self._items['output_line'].add()
+        self._items['output_line'].hidden = False
+        self._items['output_line'].draggable = False
+
+        self._items['output_dot'] = GOvalItem(self.gcanvas, self._x + 76, self._y + 23, 10, 10, self._tag)
+        self._items['output_dot'].add()
+        self._items['output_dot'].fill_color = 'white'
+        self._items['output_dot'].outline_color = 'blue'
+        self._items['output_dot'].active_outline_color = 'orange'
+        self._items['output_dot'].outline_width = 2.0
+        self._items['output_dot'].active_outline_width = 5.0
+        self._items['output_dot'].hidden = False
+        self._items['output_dot'].draggable = False
+
+        self._items['input_line1'] = GLineItem(self.gcanvas, self._x, self._y + 18, -10, self._tag)
+        self._items['input_line1'].add()
+        self._items['input_line1'].hidden = False
+        self._items['input_line1'].draggable = False
+
+        self._items['input_dot1'] = GOvalItem(self.gcanvas, self._x - 20, self._y + 13, 10, 10, self._tag)
+        self._items['input_dot1'].add()
+        self._items['input_dot1'].fill_color = 'white'
+        self._items['input_dot1'].outline_color = 'blue'
+        self._items['input_dot1'].active_outline_color = 'orange'
+        self._items['input_dot1'].outline_width = 2.0
+        self._items['input_dot1'].active_outline_width = 5.0
+        self._items['input_dot1'].hidden = False
+        self._items['input_dot1'].draggable = False
+
+        self._items['input_line2'] = GLineItem(self.gcanvas, self._x, self._y + 38, -10, self._tag)
+        self._items['input_line2'].add()
+        self._items['input_line2'].hidden = False
+        self._items['input_line2'].draggable = False
+
+        self._items['input_dot2'] = GOvalItem(self.gcanvas, self._x - 20, self._y + 33, 10, 10, self._tag)
+        self._items['input_dot2'].add()
+        self._items['input_dot2'].fill_color = 'white'
+        self._items['input_dot2'].outline_color = 'blue'
+        self._items['input_dot2'].active_outline_color = 'orange'
+        self._items['input_dot2'].outline_width = 2.0
+        self._items['input_dot2'].active_outline_width = 5.0
+        self._items['input_dot2'].hidden = False
+        self._items['input_dot2'].draggable = False
+
+        self._items['not_dot'] = GOvalItem(self.gcanvas, self._x + 58, self._y + 24, 8, 8, self._tag)
+        self._items['not_dot'].add()
+        self._items['not_dot'].fill_color = 'white'
+        self._items['not_dot'].outline_color = 'blue'
+        self._items['not_dot'].active_outline_color = 'orange'
+        self._items['not_dot'].outline_width = 2.0
+        self._items['not_dot'].active_outline_width = 5.0
+        self._items['not_dot'].hidden = False
+        self._items['not_dot'].draggable = False
+        self._items['not_dot'].highlight_group('body_plus_not_bubble')
+
+        self._items['body'] = GBufferGateBody(self.gcanvas, self._x, self._y, self._tag)
+        self._items['body'].add()
+        self._items['body'].fill_color = 'white'
+        self._items['body'].outline_color = 'blue'
+        self._items['body'].active_outline_color = 'orange'
+        self._items['body'].outline_width = 2.0
+        self._items['body'].active_outline_width = 5.0
+        self._items['body'].hidden = False
+        self._items['body'].draggable = True
+        self._items['body'].highlight_group('body_plus_not_bubble')
 
 
 class GRect(GObject):
@@ -447,10 +630,15 @@ class GRect(GObject):
 
     def add(self):
 
-        self._items['rect1'] = GRectItem(self.gcanvas, self._x, self._y, self._width, self._height, self._tag)
-        self._items['rect1'].add()
-        self._items['rect1'].hidden = False
-        self._items['rect1'].draggable = True
+        self._items['GRect'] = GRectItem(self.gcanvas, self._x, self._y, self._width, self._height, self._tag)
+        self._items['GRect'].add()
+        self._items['GRect'].fill_color = 'white'
+        self._items['GRect'].outline_color = 'blue'
+        self._items['GRect'].active_outline_color = 'orange'
+        self._items['GRect'].outline_width = 2.0
+        self._items['GRect'].active_outline_width = 5.0
+        self._items['GRect'].hidden = False
+        self._items['GRect'].draggable = True
 
 
 class GOval(GObject):
@@ -473,10 +661,15 @@ class GOval(GObject):
 
     def add(self):
 
-        self._items['output_dot'] = GOvalItem(self.gcanvas, self._x, self._y, self._width, self._height, self._tag)
-        self._items['output_dot'].add()
-        self._items['output_dot'].hidden = False
-        self._items['output_dot'].draggable = True
+        self._items['GOval'] = GOvalItem(self.gcanvas, self._x, self._y, self._width, self._height, self._tag)
+        self._items['GOval'].add()
+        self._items['GOval'].fill_color = 'white'
+        self._items['GOval'].outline_color = 'blue'
+        self._items['GOval'].active_outline_color = 'orange'
+        self._items['GOval'].outline_width = 2.0
+        self._items['GOval'].active_outline_width = 5.0
+        self._items['GOval'].hidden = False
+        self._items['GOval'].draggable = True
 
 
 class GGraphPaper(GObject):
@@ -526,6 +719,8 @@ class GGraphPaper(GObject):
             self._items['graph_paper_vline'+str(i)] = GLineItem2(self.gcanvas, points, self._tag)
             self._items['graph_paper_vline'+str(i)].add()
             self._items['graph_paper_vline'+str(i)].fill_color = line_color
+            self._items['graph_paper_vline'+str(i)].outline_width = 1.0
+            self._items['graph_paper_vline'+str(i)].active_outline_width = 1.0
             self._items['graph_paper_vline'+str(i)].hidden = False
             self._items['graph_paper_vline'+str(i)].raisable = False
             self._items['graph_paper_vline'+str(i)].draggable = False
@@ -542,6 +737,8 @@ class GGraphPaper(GObject):
             self._items['graph_paper_hline'+str(i)] = GLineItem2(self.gcanvas, points, self._tag)
             self._items['graph_paper_hline'+str(i)].add()
             self._items['graph_paper_hline'+str(i)].fill_color = line_color
+            self._items['graph_paper_hline'+str(i)].outline_width = 1.0
+            self._items['graph_paper_hline'+str(i)].active_outline_width = 1.0
             self._items['graph_paper_hline'+str(i)].hidden = False
             self._items['graph_paper_hline'+str(i)].raisable = False
             self._items['graph_paper_hline'+str(i)].draggable = False
