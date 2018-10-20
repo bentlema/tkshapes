@@ -14,6 +14,8 @@ from tkshapes import (
     GBufferGate,
     GNotGate,
     GAndGate,
+    GOrGate,
+    GXOrGate,
 )
 
 root = tk.Tk()
@@ -47,6 +49,8 @@ gcanvas.register_gobject('GOval', GOval)
 gcanvas.register_gobject('GBufferGate', GBufferGate)
 gcanvas.register_gobject('GNotGate', GNotGate)
 gcanvas.register_gobject('GAndGate', GAndGate)
+gcanvas.register_gobject('GOrGate', GOrGate)
+gcanvas.register_gobject('GXOrGate', GXOrGate)
 
 # The 'BACKGROUND' name will associate this GObject with the immovable background items
 graph_paper = gcanvas.create('GGraphPaper', 0, 0, 10000, 10000, name="BACKGROUND")
@@ -125,6 +129,15 @@ gate2.show()
 gate3 = gcanvas.create('GAndGate', 5100, 5250, name="AndGate1")
 gate3.add_mouse_bindings()
 gate3.show()
+
+gate4 = gcanvas.create('GOrGate', 5100, 5325, name="OrGate1")
+gate4.add_mouse_bindings()
+gate4.show()
+
+gate5 = gcanvas.create('GXOrGate', 5100, 5400, name="XOrGate1")
+gate5.add_mouse_bindings()
+gate5.show()
+
 
 # Print some debug info
 gcanvas.known_types()

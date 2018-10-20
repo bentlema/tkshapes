@@ -10,6 +10,8 @@ from .gobject import (
     GBufferGate,
     GNotGate,
     GAndGate,
+    GOrGate,
+    GXOrGate,
 )
 
 from .gitem import (
