@@ -326,96 +326,80 @@ class GObject:
         #print(f"DEBUG: get_item_by_id({id}) --> Not found")
         return None
 
+    def on_enter_leave(self, direction):
+        print(f"DEBUG: on_enter_leave(): {direction}")
+
     def on_enter(self, event):
-        """ handle <Enter> events for GItem, including highlighting and raising """
 
-        # TODO:
-        # TODO:  There is a lot of shared logic at the head of on_enter() and on_leave(), so let's look at
-        # TODO:  implementing some helper functions to DRY this out a bit.  One thing that would be helpful
-        # TODO:  would be to take the entered_item_id, and then extract all the needed tagging info into a
-        # TODO:  dictionary, so we can easily check things like highlight_groups, etc.
-        # TODO:
-        # TODO:  Also keep in mind, we want to be able to extract info from the tags quickly.  Currently we
-        # TODO:  are tagging highlight_groups as a colon-separated thing like this:
-        # TODO:
-        # TODO:     highlight_group:group_name
-        # TODO:
-        # TODO:  ...where the "group_name" is just an arbitrary string we use to identify multiple groups
-        # TODO:  within the same GObject.  If it becomes too much of a performance hit extracting that data,
-        # TODO:  we could instead support only a single highlight group, and just look for that tag on each
-        # TODO:  item, and if it exists, all of those items are in the group.  This would mean we could only
-        # TODO:  have a single group of items that could be highlighted together per GObject, but this is
-        # TODO:  probably fine.  So far I've not encountered the need/desire to have multiple multi-item
-        # TODO:  groups.
-        # TODO:
+        self.on_enter_leave("enter")
 
-        # convert from screen coords to canvas coords
-        #canvas = event.widget
-        #x = canvas.canvasx(event.x)
-        #y = canvas.canvasy(event.y)
-        #entered_item_id = self.gcanvas.canvas.find_closest(x, y)[0]
         entered_item_id = self.gcanvas.canvas.find_withtag('current')
-
         tags_on_id = self.gcanvas.canvas.gettags(entered_item_id)
 
         if self._tag != 'BACKGROUND':
             print(f"DEBUG: on_enter(): item {entered_item_id} with tags {tags_on_id}: ")
 
-            # I want to be able to get the GItem from entered_item_id, but need a mapping
+            # get the GItem from entered_item_id
             entered_item = self.get_item_by_id(entered_item_id)
+
             if entered_item:
                 print(f"DEBUG: on_enter(): Entered GItem: {entered_item} with id {entered_item.item}")
 
-            highlight_group_items = []
             for i in self._items:
                 id = self._items[i].item
                 tags_on_this_id = self.gcanvas.canvas.gettags(id)
                 print(f"DEBUG: on_enter():     --> {i}: {id}: {tags_on_this_id}")
 
-            if "raisable" in tags_on_id:
+            if entered_item.raisable:
                 self.gcanvas.canvas.tag_raise(self._tag)
 
             # Highlight the item where the event was triggered by manually setting outline and width
-            if "highlightable" in tags_on_id:
-                # we need to use the active_outline_color and active_outline_width of the GItem, not the GObject
-                # how do we get the corresponding GItem, knowing only the item ID?
-                self.gcanvas.canvas.itemconfigure(
-                    entered_item_id,
-                    outline=entered_item.active_outline_color,
-                    width=entered_item.active_outline_width)
+            if entered_item.highlightable:
+                entered_item.highlighted = True
 
-            # we also want to check for tag "activate_together", and if found, we want to highlight all
-            # items that are also tagged with "activate_together".  For example, in a NotGate, we want
-            # to highlight the body of the gate, and also the little bubble up front indicating the Not.
-            # 1) check for the highlight_group:<name> tag on the item entered
-            # 2) if it exists, then check to see what other items have the same tag
-            # 3) then update all of those items to be highlighted
+                # Highlight any items that are in the same highlight_group
+                #   1) check for the highlight_group on the item entered
+                #   2) if not None, then check to see what other items have the same highlight_group
+                #   3) then update all of those items to be highlighted
+                highlight_group = entered_item.highlight_group
+                print(f"DEBUG: highlight_group of entered item: {highlight_group}")
+                if highlight_group:
+                    for g_item in self._items.values():
+                        if g_item.highlightable and g_item.highlight_group == highlight_group:
+                            g_item.highlighted = True
 
     def on_leave(self, event):
-        # convert from screen coords to canvas coords
-        #canvas = event.widget
-        #x = canvas.canvasx(event.x)
-        #y = canvas.canvasy(event.y)
-        # For some reason the entered_item_id isn't always correct
-        # but when i check the tags, I see the 'current' tag is always where i expect
-        #left_item_id = self.gcanvas.canvas.find_closest(x, y)[0]
+        """ handle <Leave> events for GItem, including de-highlighting """
+
+        self.on_enter_leave("leave")
+
         left_item_id = self.gcanvas.canvas.find_withtag('current')
         tags_on_id = self.gcanvas.canvas.gettags(left_item_id)
 
         if self._tag != 'BACKGROUND':
+            #print(f"DEBUG: on_leave(): item {left_item_id} with tags {tags_on_id}: ")
+
+            # get the GItem from left_item_id
             left_item = self.get_item_by_id(left_item_id)
-            print(f"DEBUG: on_leave(): item {left_item_id} with tags {tags_on_id}: ")
+
+            if left_item:
+                print(f"DEBUG: on_leave(): item {left_item_id} with tags {tags_on_id}: ")
+
             for i in self._items:
                 id = self._items[i].item
                 tags_on_this_id = self.gcanvas.canvas.gettags(id)
                 print(f"DEBUG: on_leave():     --> {i}: {id}: {tags_on_this_id}")
 
             # De-highlight the item where the event was triggered by manually setting outline and width
-            if "highlightable" in tags_on_id:
-                self.gcanvas.canvas.itemconfigure(
-                    left_item_id,
-                    outline=left_item.outline_color,
-                    width=left_item.outline_width)
+            if left_item.highlightable:
+                left_item.highlighted = False
+
+                highlight_group = left_item.highlight_group
+                print(f"DEBUG: highlight_group of left item: {highlight_group}")
+                if highlight_group:
+                    for g_item in self._items.values():
+                        if g_item.highlightable and g_item.highlight_group == highlight_group:
+                            g_item.highlighted = False
 
     def hide(self):
         for item in self._items.values():
@@ -657,7 +641,7 @@ class GNotGate(GObject):
         self._items['not_dot'].hidden = False
         self._items['not_dot'].draggable = False
         self._items['not_dot'].show_selection = True
-        self._items['not_dot'].highlight_group('body_plus_not_bubble')
+        self._items['not_dot'].highlight_group = 'body_plus_not_bubble'
 
         self._items['body'] = GBufferGateBody(self.gcanvas, self._x, self._y, self._tag)
         self._items['body'].add()
@@ -669,7 +653,7 @@ class GNotGate(GObject):
         self._items['body'].hidden = False
         self._items['body'].draggable = True
         self._items['body'].show_selection = True
-        self._items['body'].highlight_group('body_plus_not_bubble')
+        self._items['body'].highlight_group = 'body_plus_not_bubble'
 
 
 class GOrGate(GObject):
@@ -873,6 +857,7 @@ class GXOrGate(GObject):
         self._items['body'].hidden = False
         self._items['body'].draggable = True
         self._items['body'].show_selection = True
+        self._items['body'].highlight_group = 'body_plus_arc2'
 
         self._items['arc2'] = GPolygonItem(self.gcanvas, self._arc2_points, self._tag)
         self._items['arc2'].add()
@@ -884,6 +869,7 @@ class GXOrGate(GObject):
         self._items['arc2'].hidden = False
         self._items['arc2'].draggable = True
         self._items['arc2'].show_selection = False
+        self._items['arc2'].highlight_group = 'body_plus_arc2'
 
 
 class GAndGate(GObject):

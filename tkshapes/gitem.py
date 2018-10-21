@@ -44,6 +44,10 @@ class GItem:
         self._active_outline_width = 5
         self._active_outline_color = 'orange'
 
+        # if I'm highlighted or not, and a string identifying my highlight group
+        self._highlighted = False
+        self._highlight_group = None
+
         # various properties
         self._show_selection = True       # if the GItem changes color when selected
         self._show_highlight = True       # if the GItem shows when it is "active" or not
@@ -61,10 +65,34 @@ class GItem:
         # Setting my own property
         self.hidden = False
 
-    # maybe convert this to a property too
+    @property
+    def highlighted(self):
+        return self._highlighted
+
+    @highlighted.setter
+    def highlighted(self, value):
+        self._highlighted = bool(value)
+        if value:
+            self._gcanvas.canvas.itemconfigure(
+                self._canvas_item,
+                outline=self.active_outline_color,
+                width=self.active_outline_width)
+        else:
+            self._gcanvas.canvas.itemconfigure(
+                self._canvas_item,
+                outline=self.outline_color,
+                width=self.outline_width)
+
+    @property
+    def highlight_group(self):
+        return self._highlight_group
+
+    @highlight_group.setter
     def highlight_group(self, name):
-        print(f"Adding {name} tag to {self._canvas_item}")
-        self._gcanvas.canvas.addtag_withtag("highlight_group:" + name, self._canvas_item)
+        self._highlight_group = name
+        # we dont need to add the tag, as we are moving away from this rogue communication path
+        #print(f"Adding {name} tag to {self._canvas_item}")
+        #self._gcanvas.canvas.addtag_withtag("highlight_group:" + name, self._canvas_item)
 
     @property
     def item(self):
