@@ -205,7 +205,7 @@ class GCanvas(tk.Frame):
         x = self.canvas.canvasx(event.x)
         y = self.canvas.canvasy(event.y)
         # Beginning of selection box - record the initial click
-        print("Click   ({},{})".format(x, y))
+        #print("DEBUG: Click   ({},{})".format(x, y))
         # Save the location of the initial click
         self._drag_data["start_x"] = x
         self._drag_data["start_y"] = y
@@ -220,7 +220,7 @@ class GCanvas(tk.Frame):
         x = self.canvas.canvasx(event.x)
         y = self.canvas.canvasy(event.y)
         # End of selection box - record the coordinates of the button release
-        print("Release ({},{})".format(x, y))
+        #print("DEBUG: Release ({},{})".format(x, y))
         self._drag_data["end_x"] = x
         self._drag_data["end_y"] = y
         self.canvas.delete("selection_box")

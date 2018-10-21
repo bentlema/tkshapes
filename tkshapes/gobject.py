@@ -1,12 +1,4 @@
 import math
-#
-# Starting to work on a major refactor to separate out GItems from GObjects
-# The GItems will manage the individual canvas items, and their properties
-# GObjects will be built of GItems, so one GObject can be composed of multiple
-# GItems.
-#
-# The GItems will set various tags, but all key/mouse bindings will be done
-# in the GObject based off of those tags.
 
 from .gitem import (
     GLineItem,
@@ -34,11 +26,6 @@ class GObject:
         # my primary name tag
         # TODO: if no name_tag is given, we need to generate a random unique tag name
         self._tag = name_tag
-
-        # my canvas item - this will get set to something in the sub-class that inherits from me
-        # TODO: this should go away when we finish the GItem, and we will keep track of a set of
-        # TODO: GItems instead.
-        self.canvas_item = None
 
         # TODO: The GObject needs to keep track of the GItems it contains
         # TODO: IN-PROGRESS: Let's keep track of the GItems here.
@@ -163,14 +150,14 @@ class GObject:
 
     def on_button_press(self, event):
         """ Beginning drag of an object - record the item and its location """
-        print(f"DEBUG: CLICK   Button-{event.num} Item: {event.widget.find_withtag('current')}")
+        #print(f"DEBUG: CLICK   Button-{event.num} Item: {event.widget.find_withtag('current')}")
         self._drag_data["item"] = self.gcanvas.canvas.find_closest(event.x, event.y)[0]
         self._drag_data["x"] = event.x
         self._drag_data["y"] = event.y
 
     def on_button_release(self, event):
         """ End drag of an object - reset the drag information """
-        print(f"DEBUG: RELEASE Button-{event.num} Item: {event.widget.find_withtag('current')}")
+        #print(f"DEBUG: RELEASE Button-{event.num} Item: {event.widget.find_withtag('current')}")
         self._drag_data["item"] = None
         self._drag_data["x"] = 0
         self._drag_data["y"] = 0
@@ -339,11 +326,11 @@ class GObject:
             # get the GItem from item_id
             g_item = self.get_item_by_id(canvas_item_id)
 
-            if g_item:
-                if direction is "enter":
-                    print(f"DEBUG: Entered GItem: {g_item} with id {g_item.item}")
-                else:
-                    print(f"DEBUG: Leaving GItem: {g_item} with id {g_item.item}")
+            #if g_item:
+            #    if direction is "enter":
+            #        print(f"DEBUG: Entered GItem: {g_item} with id {g_item.item}")
+            #    else:
+            #        print(f"DEBUG: Leaving GItem: {g_item} with id {g_item.item}")
 
             if direction is "enter" and g_item.raisable:
                 # we should be calling GItem.raise() but this is faster
