@@ -16,6 +16,10 @@ class GItem:
         # my primary name tag -- inherited from the parent GObject
         self._tag = name_tag
 
+        # I should keep track of my owning GObject in case I want to refer back to its properties
+        # but it'd need to pass that info in when I create the GItem (this is not used yet)
+        self._owner = None
+
         # my canvas item - this will get set to something in the sub-class that inherits from me
         # Each GItem manages a SINGLE canvas item, but a GObject can own multiple GItems
         self._canvas_item = None
@@ -24,9 +28,15 @@ class GItem:
         self._hidden = True               # controlled by self.hidden property
         self._item_state = 'hidden'       # defaults to 'hidden', but will change according to self.hidden property
 
-        # all fillable canvas items will use these colors
+        # if I'm selected or not
+        self._selected = False            # controlled by self.selected property
+
+        # all fillable canvas items will use these colors by default
         self._fill_color = 'white'
         self._selected_fill_color = '#1111FF'
+
+        # will reflect either fill_color or selected_fill_color depending on selection status
+        self._current_fill_color = 'red'
 
         # current line width and active line width (changes when zooming in/out to maintain proper ratio)
         self._outline_width = 2
@@ -105,14 +115,50 @@ class GItem:
             self._gcanvas.canvas.itemconfigure(self._canvas_item, activeoutline=value)
 
     @property
+    def selected(self):
+        return self._selected
+
+    @selected.setter
+    def selected(self, value):
+        self._selected = bool(value)
+
+        if value:
+            self._gcanvas.canvas.addtag_withtag("selected", self._canvas_item)
+        else:
+            self._gcanvas.canvas.dtag(self._canvas_item, "selected")
+
+        if self.show_selection:
+            if value:
+                self.current_fill_color = self.selected_fill_color
+            else:
+                self.current_fill_color = self.fill_color
+
+    @property
+    def current_fill_color(self):
+        return self._current_fill_color
+
+    @current_fill_color.setter
+    def current_fill_color(self, value):
+        self._current_fill_color = value
+        if self._canvas_item:
+            self._gcanvas.canvas.itemconfigure(self._canvas_item, fill=value)
+
+    @property
     def fill_color(self):
         return self._fill_color
 
     @fill_color.setter
     def fill_color(self, value):
         self._fill_color = value
-        if self._canvas_item:
-            self._gcanvas.canvas.itemconfigure(self._canvas_item, fill=value)
+        self.current_fill_color = self.fill_color
+
+    @property
+    def selected_fill_color(self):
+        return self._selected_fill_color
+
+    @selected_fill_color.setter
+    def selected_fill_color(self, value):
+        self._selected_fill_color = value
 
     @property
     def outline_width(self):
@@ -292,7 +338,7 @@ class GBufferGateBody(GItem):
             points,
             outline=self._outline_color,
             activeoutline=self._outline_color,
-            fill=self._fill_color,
+            fill=self.fill_color,            # property
             width=self.outline_width,        # property
             activewidth=self.outline_width,  # property
             state=self._item_state,
@@ -322,9 +368,9 @@ class GRectItem(GItem):
             self._x + self.width, self._y + self.height,
             outline=self._outline_color,
             activeoutline=self._outline_color,
-            fill=self._fill_color,
-            width=self._outline_width,
-            activewidth=self._outline_width,
+            fill=self.fill_color,            # property
+            width=self.outline_width,        # property
+            activewidth=self.outline_width,  # property
             state=self._item_state,
             tags=self._tag)
 
@@ -351,9 +397,9 @@ class GOvalItem(GItem):
             self._x + self.width, self._y + self.height,
             outline=self._outline_color,
             activeoutline=self._outline_color,
-            fill=self._fill_color,
-            width=self._outline_width,
-            activewidth=self._outline_width,
+            fill=self.fill_color,            # property
+            width=self.outline_width,        # property
+            activewidth=self.outline_width,  # property
             state=self._item_state,
             tags=self._tag)
 
@@ -382,9 +428,9 @@ class GPolygonItem(GItem):
             self._points,
             outline=self._outline_color,
             activeoutline=self._outline_color,
-            fill=self._fill_color,
-            width=self._outline_width,
-            activewidth=self._outline_width,
+            fill=self.fill_color,            # property
+            width=self.outline_width,        # property
+            activewidth=self.outline_width,  # property
             state=self._item_state,
             tags=self._tag)
 
