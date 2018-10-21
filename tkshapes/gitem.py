@@ -349,38 +349,6 @@ class GLineItem2(GItem):
         self.highlightable = False
 
 
-class GBufferGateBody(GItem):
-    """ The Buffer Gate Triangle draws itself on a GCanvas """
-
-    def __init__(self, gcanvas, initial_x, initial_y, name_tag=None):
-        super().__init__(gcanvas, initial_x, initial_y, name_tag)
-
-    def add(self):
-        # Draw the triangle portion of the BufferGate
-        points = []
-        points.extend((self._x, self._y))              # first point in polygon
-        points.extend((self._x + 58, self._y + 28))
-        points.extend((self._x +  0, self._y + 56))
-
-        self._canvas_item = self._gcanvas.canvas.create_polygon(
-            points,
-            outline=self._outline_color,
-            activeoutline=self._outline_color,
-            fill=self.fill_color,            # property
-            width=self.outline_width,        # property
-            activewidth=self.outline_width,  # property
-            state=self._item_state,
-            tags=self._tag)
-
-        # the item should be raisable by default unless overridden in the GObject
-        self.raisable = True
-
-        # will leave this here for now, but I think I'll come up with a differet/better way to control highlight groups
-        # Tag the specific canvas items we want to activate (highlight) together
-        #self._gcanvas.canvas.addtag_withtag(self._tag + "activate_together", self._canvas_item)
-        self.highlightable = True
-
-
 class GRectItem(GItem):
     """ Draw Square or Rectangle on a GCanvas """
 

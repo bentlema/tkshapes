@@ -6,8 +6,8 @@ from .gitem import (
     GRectItem,
     GOvalItem,
     GPolygonItem,
-    GBufferGateBody,
 )
+
 
 class GObject:
     """
@@ -489,6 +489,8 @@ class GBufferGate(GObject):
         # Initialize parent GObject class
         super().__init__(initial_x, initial_y, name_tag)
 
+        self._points = []
+
     def add(self):
 
         self._items['output_line'] = GLineItem(self.gcanvas, self._x + 58, self._y + 28, 10, self._tag)
@@ -523,7 +525,11 @@ class GBufferGate(GObject):
         self._items['input_dot'].draggable = False
         self._items['input_dot'].show_selection = False
 
-        self._items['body'] = GBufferGateBody(self.gcanvas, self._x, self._y, self._tag)
+        self._points.extend((self._x, self._y))  # first point in polygon
+        self._points.extend((self._x + 58, self._y + 28))
+        self._points.extend((self._x + 0, self._y + 56))
+
+        self._items['body'] = GPolygonItem(self.gcanvas, self._points, self._tag)
         self._items['body'].add()
         self._items['body'].fill_color = 'white'
         self._items['body'].outline_color = 'blue'
@@ -546,8 +552,9 @@ class GNotGate(GObject):
         # Initialize parent GObject class
         super().__init__(initial_x, initial_y, name_tag)
 
-    def add(self):
+        self._points = []
 
+    def add(self):
         self._items['output_line'] = GLineItem(self.gcanvas, self._x + 66, self._y + 28, 10, self._tag)
         self._items['output_line'].add()
         self._items['output_line'].hidden = False
@@ -592,7 +599,11 @@ class GNotGate(GObject):
         self._items['not_dot'].show_selection = True
         self._items['not_dot'].highlight_group = 'body_plus_not_bubble'
 
-        self._items['body'] = GBufferGateBody(self.gcanvas, self._x, self._y, self._tag)
+        self._points.extend((self._x, self._y))  # first point in polygon
+        self._points.extend((self._x + 58, self._y + 28))
+        self._points.extend((self._x + 0, self._y + 56))
+
+        self._items['body'] = GPolygonItem(self.gcanvas, self._points, self._tag)
         self._items['body'].add()
         self._items['body'].fill_color = 'white'
         self._items['body'].outline_color = 'blue'
@@ -622,11 +633,6 @@ class GOrGate(GObject):
 
         x = self._x
         y = self._y
-
-        # An OR gate has two input connections and one output connection
-        # self.input_connection['IN_0'] = InputConnection(self, (x + 7, y + 17), 'Input 0')
-        # self.input_connection['IN_1'] = InputConnection(self, (x + 7, y + 43), 'Input 1')
-        # self.output_connection['OUT_0'] = OutputConnection(self, (x + 65, y + 30), 'Output')
 
         self._points.extend((x, y))  # first point in polygon
 

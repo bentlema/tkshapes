@@ -20,6 +20,5 @@ from .gitem import (
     GRectItem,
     GOvalItem,
     GPolygonItem,
-    GBufferGateBody,
 )
 
