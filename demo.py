@@ -138,7 +138,6 @@ gate5 = gcanvas.create('GXOrGate', 5100, 5400, name="XOrGate1")
 gate5.add_mouse_bindings()
 gate5.show()
 
-
 # Print some debug info
 gcanvas.known_types()
 gcanvas.known_gobjects()

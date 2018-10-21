@@ -148,7 +148,7 @@ class GObject:
         self.gcanvas.canvas.tag_bind(self._tag + ":draggable", "<ButtonRelease-1>", self.on_button_release)
         self.gcanvas.canvas.tag_bind(self._tag + ":draggable", "<B1-Motion>", self.on_button_motion)
 
-        # add bindings for right-click (could eventually be used for context-sensative menus)
+        # add bindings for right-click (could eventually be used for context-sensitive menus)
         # TODO: not used yet, but we may want to use different callbacks to keep the code separate from
         # TODO: the click-drag-release code.  Otherwise use event.num to detect what button is being pressed.
         self.gcanvas.canvas.tag_bind(self._tag + ":draggable", "<ButtonPress-2>", self.on_button_press)
@@ -418,10 +418,12 @@ class GObject:
                     width=left_item.outline_width)
 
     def hide(self):
-        self.gcanvas.canvas.itemconfigure(self.canvas_item, state="hidden")
+        for item in self._items.values():
+            item.hidden = True
 
     def show(self):
-        self.gcanvas.canvas.itemconfigure(self.canvas_item, state="normal")
+        for item in self._items.values():
+            item.hidden = False
 
     # TODO: The make_draggable() and make_undraggable methods need to be re-done
     # TODO: They should affect a GObject-level toggle, rather than manipulate
