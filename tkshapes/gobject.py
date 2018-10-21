@@ -326,80 +326,42 @@ class GObject:
         #print(f"DEBUG: get_item_by_id({id}) --> Not found")
         return None
 
-    def on_enter_leave(self, direction):
-        print(f"DEBUG: on_enter_leave(): {direction}")
-
     def on_enter(self, event):
-
         self.on_enter_leave("enter")
 
-        entered_item_id = self.gcanvas.canvas.find_withtag('current')
-        tags_on_id = self.gcanvas.canvas.gettags(entered_item_id)
-
-        if self._tag != 'BACKGROUND':
-            print(f"DEBUG: on_enter(): item {entered_item_id} with tags {tags_on_id}: ")
-
-            # get the GItem from entered_item_id
-            entered_item = self.get_item_by_id(entered_item_id)
-
-            if entered_item:
-                print(f"DEBUG: on_enter(): Entered GItem: {entered_item} with id {entered_item.item}")
-
-            for i in self._items:
-                id = self._items[i].item
-                tags_on_this_id = self.gcanvas.canvas.gettags(id)
-                print(f"DEBUG: on_enter():     --> {i}: {id}: {tags_on_this_id}")
-
-            if entered_item.raisable:
-                self.gcanvas.canvas.tag_raise(self._tag)
-
-            # Highlight the item where the event was triggered by manually setting outline and width
-            if entered_item.highlightable:
-                entered_item.highlighted = True
-
-                # Highlight any items that are in the same highlight_group
-                #   1) check for the highlight_group on the item entered
-                #   2) if not None, then check to see what other items have the same highlight_group
-                #   3) then update all of those items to be highlighted
-                highlight_group = entered_item.highlight_group
-                print(f"DEBUG: highlight_group of entered item: {highlight_group}")
-                if highlight_group:
-                    for g_item in self._items.values():
-                        if g_item.highlightable and g_item.highlight_group == highlight_group:
-                            g_item.highlighted = True
-
     def on_leave(self, event):
-        """ handle <Leave> events for GItem, including de-highlighting """
-
         self.on_enter_leave("leave")
 
-        left_item_id = self.gcanvas.canvas.find_withtag('current')
-        tags_on_id = self.gcanvas.canvas.gettags(left_item_id)
-
+    def on_enter_leave(self, direction):
         if self._tag != 'BACKGROUND':
-            #print(f"DEBUG: on_leave(): item {left_item_id} with tags {tags_on_id}: ")
+            canvas_item_id = self.gcanvas.canvas.find_withtag('current')
 
-            # get the GItem from left_item_id
-            left_item = self.get_item_by_id(left_item_id)
+            # get the GItem from item_id
+            g_item = self.get_item_by_id(canvas_item_id)
 
-            if left_item:
-                print(f"DEBUG: on_leave(): item {left_item_id} with tags {tags_on_id}: ")
+            if g_item:
+                if direction is "enter":
+                    print(f"DEBUG: Entered GItem: {g_item} with id {g_item.item}")
+                else:
+                    print(f"DEBUG: Leaving GItem: {g_item} with id {g_item.item}")
 
-            for i in self._items:
-                id = self._items[i].item
-                tags_on_this_id = self.gcanvas.canvas.gettags(id)
-                print(f"DEBUG: on_leave():     --> {i}: {id}: {tags_on_this_id}")
+            if direction is "enter" and g_item.raisable:
+                # we should be calling GItem.raise() but this is faster
+                self.gcanvas.canvas.tag_raise(self._tag)
 
-            # De-highlight the item where the event was triggered by manually setting outline and width
-            if left_item.highlightable:
-                left_item.highlighted = False
+            # (de)highlight the item where the event was triggered by manually setting outline and width
+            if g_item.highlightable:
+                if direction is "enter":  # <Enter>
+                    highlighted = True
+                else:                     # <Leave>
+                    highlighted = False
 
-                highlight_group = left_item.highlight_group
-                print(f"DEBUG: highlight_group of left item: {highlight_group}")
-                if highlight_group:
-                    for g_item in self._items.values():
-                        if g_item.highlightable and g_item.highlight_group == highlight_group:
-                            g_item.highlighted = False
+                if not g_item.highlight_group:
+                    g_item.highlighted = highlighted
+                else:
+                    for sibling_g_item in self._items.values():
+                        if sibling_g_item.highlightable and sibling_g_item.highlight_group == g_item.highlight_group:
+                            sibling_g_item.highlighted = highlighted
 
     def hide(self):
         for item in self._items.values():
