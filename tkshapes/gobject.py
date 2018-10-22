@@ -27,29 +27,19 @@ class GObject:
         # TODO: if no name_tag is given, we need to generate a random unique tag name
         self._tag = name_tag
 
-        # TODO: The GObject needs to keep track of the GItems it contains
-        # TODO: IN-PROGRESS: Let's keep track of the GItems here.
-        # TODO: Each GItem will have its own item-level name, so let's use a Dictionary
-        # TODO: Key will be the GItem name, and value will be the actual object
+        # Remember my GItems - Key is the GItem name, and Value is the actual GItem object
         self._items = {}
 
-        # TODO: We also need a mapping of canvas Item ID --> GItem, as there are cases
-        # TODO: Where we have a canvas item ID, but need to know the GItem in order to
-        # TODO: check some properties of it.  We might be able to get around this if
-        # TODO: we move all lower-level canvas interaction within the GItems, but that
-        # TODO: doesn't seem like an easy change...will think on it.
-        # TODO:
-        # TODO: Okay, i implemented get_item_by_id, but it's a for loop, and I'm not using
+        # TODO: Okay, i implemented get_item_by_id, but it's a O(n) for loop, and I'm not using
         # TODO: the below dictionary.  Instead i'm looping through self._items, which seems
-        # TODO: okay for now, but I'd rather an O(n) function, so need to build out this
+        # TODO: okay for now, but I'd rather an O(1) function, so need to build out this
         # TODO: dictionary when each GItem is created, and I will re-write get_item_by_id()
         self._canvas_item_id_to_gitem = {}
 
-        # Move to GItem?
-        # this data is used to keep track of a canvas object being dragged
+        # Keep track of a canvas object being dragged
         self._drag_data = {"x": 0, "y": 0, "item": None}
 
-        # NOTE: selection will be done at the GObject level, but we also keep track of each GItem's
+        # NOTE: selection is done at the GObject level, but we also keep track of each GItem's
         # NOTE: selection status.
         #
         #    * GObject-level selection:
@@ -58,14 +48,9 @@ class GObject:
         #
         #    * GItem-level selection:
         #        - affects how the GItem is displayed (fill_color vs selected_fill_color)
-        #
+
         # my selection status (am I selected or not)
         self._selected = False
-
-        # Move to GItem?
-        # all fillable canvas items will use these colors
-        self.fill_color = 'white'
-        self._selected_fill_color = '#1111FF'
 
         # Move to GItem?
         # current line width and active line width (changes when zooming in/out to maintain proper ratio)
