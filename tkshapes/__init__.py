@@ -4,7 +4,6 @@ from .gcanvas import GCanvas
 from .gobject import (
     GObject,
     GGraphPaper,
-    GFoo,
     GOval,
     GRect,
     GBufferGate,
@@ -12,11 +11,13 @@ from .gobject import (
     GAndGate,
     GOrGate,
     GXOrGate,
+    GPythonLogo,
 )
 
 from .gitem import (
+    GHorzLineItem,
+    GVertLineItem,
     GLineItem,
-    GLineItem2,
     GRectItem,
     GOvalItem,
     GPolygonItem,

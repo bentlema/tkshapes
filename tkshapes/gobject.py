@@ -1,12 +1,21 @@
 import math
+import cmath
+import itertools
 
 from .gitem import (
     GLineItem,
-    GLineItem2,
+    GHorzLineItem,
+    GVertLineItem,
     GRectItem,
     GOvalItem,
     GPolygonItem,
 )
+
+def grouper(iterable, n, fillvalue=None):
+    "Collect data into fixed-length chunks or blocks"
+    # grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx"
+    args = [iter(iterable)] * n
+    return itertools.zip_longest(*args, fillvalue=fillvalue)
 
 
 class GObject:
@@ -136,7 +145,8 @@ class GObject:
     def on_button_press(self, event):
         """ Beginning drag of an object - record the item and its location """
         #print(f"DEBUG: CLICK   Button-{event.num} Item: {event.widget.find_withtag('current')}")
-        self._drag_data["item"] = self.gcanvas.canvas.find_closest(event.x, event.y)[0]
+        #self._drag_data["item"] = self.gcanvas.canvas.find_closest(event.x, event.y)[0]
+        self._drag_data["item"] = event.widget.find_withtag('current')
         self._drag_data["x"] = event.x
         self._drag_data["y"] = event.y
 
@@ -209,9 +219,13 @@ class GObject:
         self._drag_data["x"] = event.x
         self._drag_data["y"] = event.y
 
+        # convert from screen coords to canvas coords
+        x = event.widget.canvasx(event.x)
+        y = event.widget.canvasy(event.y)
+
         # update status var
         if self.gcanvas.status_var:
-            self.gcanvas.status_var.set(f"Dragging {self._tag} ...")
+            self.gcanvas.status_var.set(f"Dragging {self._tag} at {x}x{y}")
 
     def on_command_button_press(self, event):
         """ handle Command-Click on a GObject to toggle Selection """
@@ -407,62 +421,6 @@ class GObject:
         self._connectable = bool(value)
 
 
-class GFoo(GObject):
-
-    def __init__(self, *args, **kwargs):
-
-        initial_x = args[0]
-        initial_y = args[1]
-        length = args[2]
-        name_tag = kwargs['name']
-
-        # Initialize parent GObject class
-        super().__init__(initial_x, initial_y, name_tag)
-
-        # attributes unique to the GFoo
-        self.length = length
-
-    def add(self):
-        # we need to make a registration method, the same way we did for GObjects with GCanvas
-        # but for now, let's just do this hard coded...
-
-        self._items['line1'] = GLineItem(self.gcanvas, self._x, self._y, self.length, self._tag)
-        self._items['line1'].add()
-        self._items['line1'].hidden = False
-        self._items['line1'].draggable = False
-        self._items['line1'].raisable = True
-
-        self._items['line2'] = GLineItem(self.gcanvas, self._x, self._y + 4, self.length, self._tag)
-        self._items['line2'].add()
-        self._items['line2'].hidden = False
-        self._items['line2'].draggable = False
-        self._items['line2'].raisable = True
-
-        self._items['line3'] = GLineItem(self.gcanvas, self._x, self._y + 8, self.length, self._tag)
-        self._items['line3'].add()
-        self._items['line3'].hidden = False
-        self._items['line3'].draggable = False
-        self._items['line3'].raisable = True
-
-        self._items['line4'] = GLineItem(self.gcanvas, self._x, self._y + 12, self.length, self._tag)
-        self._items['line4'].add()
-        self._items['line4'].hidden = False
-        self._items['line4'].draggable = False
-        self._items['line4'].raisable = True
-
-        self._items['oval1'] = GOvalItem(self.gcanvas, self._x, self._y + 16, self.length, self.length, self._tag)
-        self._items['oval1'].add()
-        self._items['oval1'].fill_color = '#aaaaaa'
-        self._items['oval1'].selected_fill_color = '#ff0000'
-        self._items['oval1'].outline_color = 'blue'
-        self._items['oval1'].active_outline_color = 'orange'
-        self._items['oval1'].outline_width = 2.0
-        self._items['oval1'].active_outline_width = 5.0
-        self._items['oval1'].hidden = False
-        self._items['oval1'].draggable = True
-        self._items['oval1'].selectable = True
-
-
 class GBufferGate(GObject):
 
     def __init__(self, *args, **kwargs):
@@ -478,7 +436,7 @@ class GBufferGate(GObject):
 
     def add(self):
 
-        self._items['output_line'] = GLineItem(self.gcanvas, self._x + 58, self._y + 28, 10, self._tag)
+        self._items['output_line'] = GHorzLineItem(self.gcanvas, self._x + 58, self._y + 28, 10, self._tag)
         self._items['output_line'].add()
         self._items['output_line'].hidden = False
         self._items['output_line'].draggable = False
@@ -494,7 +452,7 @@ class GBufferGate(GObject):
         self._items['output_dot'].draggable = False
         self._items['output_dot'].show_selection = False
 
-        self._items['input_line'] = GLineItem(self.gcanvas, self._x, self._y + 28, -10, self._tag)
+        self._items['input_line'] = GHorzLineItem(self.gcanvas, self._x, self._y + 28, -10, self._tag)
         self._items['input_line'].add()
         self._items['input_line'].hidden = False
         self._items['input_line'].draggable = False
@@ -540,7 +498,7 @@ class GNotGate(GObject):
         self._points = []
 
     def add(self):
-        self._items['output_line'] = GLineItem(self.gcanvas, self._x + 66, self._y + 28, 10, self._tag)
+        self._items['output_line'] = GHorzLineItem(self.gcanvas, self._x + 66, self._y + 28, 10, self._tag)
         self._items['output_line'].add()
         self._items['output_line'].hidden = False
         self._items['output_line'].draggable = False
@@ -556,7 +514,7 @@ class GNotGate(GObject):
         self._items['output_dot'].draggable = False
         self._items['output_dot'].show_selection = False
 
-        self._items['input_line'] = GLineItem(self.gcanvas, self._x, self._y + 28, -10, self._tag)
+        self._items['input_line'] = GHorzLineItem(self.gcanvas, self._x, self._y + 28, -10, self._tag)
         self._items['input_line'].add()
         self._items['input_line'].hidden = False
         self._items['input_line'].draggable = False
@@ -633,7 +591,7 @@ class GOrGate(GObject):
             arc_y = (math.sin(math.radians(angle)) * 30) + (y + 30)
             self._points.extend((arc_x, arc_y))
 
-        self._items['output_line'] = GLineItem(self.gcanvas, self._x + 65, self._y + 30, 10, self._tag)
+        self._items['output_line'] = GHorzLineItem(self.gcanvas, self._x + 65, self._y + 30, 10, self._tag)
         self._items['output_line'].add()
         self._items['output_line'].hidden = False
         self._items['output_line'].draggable = False
@@ -649,7 +607,7 @@ class GOrGate(GObject):
         self._items['output_dot'].draggable = False
         self._items['output_dot'].show_selection = False
 
-        self._items['input_line1'] = GLineItem(self.gcanvas, self._x + 7, self._y + 17, -10, self._tag)
+        self._items['input_line1'] = GHorzLineItem(self.gcanvas, self._x + 7, self._y + 17, -10, self._tag)
         self._items['input_line1'].add()
         self._items['input_line1'].hidden = False
         self._items['input_line1'].draggable = False
@@ -665,7 +623,7 @@ class GOrGate(GObject):
         self._items['input_dot1'].draggable = False
         self._items['input_dot1'].show_selection = False
 
-        self._items['input_line2'] = GLineItem(self.gcanvas, self._x + 7, self._y + 43, -10, self._tag)
+        self._items['input_line2'] = GHorzLineItem(self.gcanvas, self._x + 7, self._y + 43, -10, self._tag)
         self._items['input_line2'].add()
         self._items['input_line2'].hidden = False
         self._items['input_line2'].draggable = False
@@ -739,7 +697,7 @@ class GXOrGate(GObject):
             arc_y = (math.sin(math.radians(angle)) * 30) + (y + 30)
             self._arc2_points.extend((arc_x, arc_y))
 
-        self._items['output_line'] = GLineItem(self.gcanvas, self._x + 65, self._y + 30, 10, self._tag)
+        self._items['output_line'] = GHorzLineItem(self.gcanvas, self._x + 65, self._y + 30, 10, self._tag)
         self._items['output_line'].add()
         self._items['output_line'].hidden = False
         self._items['output_line'].draggable = False
@@ -755,7 +713,7 @@ class GXOrGate(GObject):
         self._items['output_dot'].draggable = False
         self._items['output_dot'].show_selection = False
 
-        self._items['input_line1'] = GLineItem(self.gcanvas, self._x, self._y + 17, -10, self._tag)
+        self._items['input_line1'] = GHorzLineItem(self.gcanvas, self._x, self._y + 17, -10, self._tag)
         self._items['input_line1'].add()
         self._items['input_line1'].hidden = False
         self._items['input_line1'].draggable = False
@@ -771,7 +729,7 @@ class GXOrGate(GObject):
         self._items['input_dot1'].draggable = False
         self._items['input_dot1'].show_selection = False
 
-        self._items['input_line2'] = GLineItem(self.gcanvas, self._x, self._y + 43, -10, self._tag)
+        self._items['input_line2'] = GHorzLineItem(self.gcanvas, self._x, self._y + 43, -10, self._tag)
         self._items['input_line2'].add()
         self._items['input_line2'].hidden = False
         self._items['input_line2'].draggable = False
@@ -842,7 +800,7 @@ class GAndGate(GObject):
 
         self._points.extend((x, y + 60))  # last point in polygon, which connects back to the 1st point
 
-        self._items['output_line'] = GLineItem(self.gcanvas, self._x + 59, self._y + 30, 10, self._tag)
+        self._items['output_line'] = GHorzLineItem(self.gcanvas, self._x + 59, self._y + 30, 10, self._tag)
         self._items['output_line'].add()
         self._items['output_line'].hidden = False
         self._items['output_line'].draggable = False
@@ -858,7 +816,7 @@ class GAndGate(GObject):
         self._items['output_dot'].draggable = False
         self._items['output_dot'].show_selection = False
 
-        self._items['input_line1'] = GLineItem(self.gcanvas, self._x, self._y + 17, -10, self._tag)
+        self._items['input_line1'] = GHorzLineItem(self.gcanvas, self._x, self._y + 17, -10, self._tag)
         self._items['input_line1'].add()
         self._items['input_line1'].hidden = False
         self._items['input_line1'].draggable = False
@@ -874,7 +832,7 @@ class GAndGate(GObject):
         self._items['input_dot1'].draggable = False
         self._items['input_dot1'].show_selection = False
 
-        self._items['input_line2'] = GLineItem(self.gcanvas, self._x, self._y + 43, -10, self._tag)
+        self._items['input_line2'] = GHorzLineItem(self.gcanvas, self._x, self._y + 43, -10, self._tag)
         self._items['input_line2'].add()
         self._items['input_line2'].hidden = False
         self._items['input_line2'].draggable = False
@@ -1007,7 +965,7 @@ class GGraphPaper(GObject):
             else:
                 line_color = "#ccffcc"
             points = [(i, self._x), (i, self._x + self._height)]
-            self._items['graph_paper_vline'+str(i)] = GLineItem2(self.gcanvas, points, self._tag)
+            self._items['graph_paper_vline'+str(i)] = GLineItem(self.gcanvas, points, self._tag)
             self._items['graph_paper_vline'+str(i)].add()
             self._items['graph_paper_vline'+str(i)].fill_color = line_color
             self._items['graph_paper_vline'+str(i)].outline_width = 1.0
@@ -1024,7 +982,7 @@ class GGraphPaper(GObject):
             else:
                 line_color = "#ccffcc"
             points = [(self._y, i), (self._y + self._width, i)]
-            self._items['graph_paper_hline'+str(i)] = GLineItem2(self.gcanvas, points, self._tag)
+            self._items['graph_paper_hline'+str(i)] = GLineItem(self.gcanvas, points, self._tag)
             self._items['graph_paper_hline'+str(i)].add()
             self._items['graph_paper_hline'+str(i)].fill_color = line_color
             self._items['graph_paper_hline'+str(i)].outline_width = 1.0
@@ -1033,4 +991,110 @@ class GGraphPaper(GObject):
             self._items['graph_paper_hline'+str(i)].raisable = False
             self._items['graph_paper_hline'+str(i)].draggable = False
             self._items['graph_paper_hline'+str(i)].selectable = False
+
+
+class GPythonLogo(GObject):
+    """ Draw Python Logo on the GCanvas """
+
+    def __init__(self, *args, **kwargs):
+        initial_x = args[0]
+        initial_y = args[1]
+        name_tag = kwargs['name']
+
+        # Initialize parent GObject class
+        super().__init__(initial_x, initial_y, name_tag)
+
+        self._points = []
+
+    def add(self):
+
+        x = self._x
+        y = self._y
+
+        self._points.extend((x, y + 68))  # first point in polygon
+
+        # starting at top left snake mouth
+        for angle in range(-180, -90):
+            arc_x = (math.cos(math.radians(angle)) * 30) + (x + 29)
+            arc_y = (math.sin(math.radians(angle)) * 30) + (y + 30)
+            self._points.extend((arc_x, arc_y))
+
+        for angle in range(-90, 0):
+            arc_x = (math.cos(math.radians(angle)) * 30) + (x + 126)
+            arc_y = (math.sin(math.radians(angle)) * 30) + (y + 30)
+            self._points.extend((arc_x, arc_y))
+
+        for angle in range(0, 90):
+            arc_x = (math.cos(math.radians(angle)) * 30) + (x + 126)
+            arc_y = (math.sin(math.radians(angle)) * 30) + (y + 122)
+            self._points.extend((arc_x, arc_y))
+
+        for angle in range(-90, 0):
+            arc_x = (math.cos(math.radians(angle)) * -42) + (x + 30)
+            arc_y = (math.sin(math.radians(angle)) * 42) + (y + 194)
+            self._points.extend((arc_x, arc_y))
+
+        self._points.extend((x - 12, y + 238))
+
+        for angle in range(90, 180):
+            arc_x = (math.cos(math.radians(angle)) * 30) + (x - 50)
+            arc_y = (math.sin(math.radians(angle)) * 30) + (y + 208)
+            self._points.extend((arc_x, arc_y))
+
+        for angle in range(-180, -90):
+            arc_x = (math.cos(math.radians(angle)) * 30) + (x - 50)
+            arc_y = (math.sin(math.radians(angle)) * 30) + (y + 110)
+            self._points.extend((arc_x, arc_y))
+
+        self._points.extend((x + 78, y + 80))
+        self._points.extend((x + 78, y + 68))
+        self._points.extend((x + 32, y + 68))
+        self._points.extend((x + 32, y + 50))
+
+        for angle in range(-270, 90):
+            arc_x = (math.cos(math.radians(angle)) * 15) + (x + 32)
+            arc_y = (math.sin(math.radians(angle)) * 15) + (y + 32)
+            self._points.extend((arc_x, arc_y))
+
+        self._points.extend((x + 32, y + 68))
+
+        self._items['blue_snake'] = GPolygonItem(self.gcanvas, self._points, self._tag)
+        self._items['blue_snake'].add()
+        self._items['blue_snake'].fill_color = '#4B8BBE'
+        self._items['blue_snake'].outline_color = '#4B8BBE'
+        self._items['blue_snake'].active_outline_color = '#4B8BBE'
+        self._items['blue_snake'].outline_width = 1.0
+        self._items['blue_snake'].active_outline_width = 1.0
+        self._items['blue_snake'].hidden = False
+        self._items['blue_snake'].draggable = True
+        self._items['blue_snake'].show_selection = False
+        self._items['blue_snake'].show_highlight = False
+
+        # I want to make a second snake rotated 180 degrees
+        # See: http://effbot.org/zone/tkinter-complex-canvas.htm
+        angle = 3.14159  # 3.14159 radians = 180 degrees
+        cangle = cmath.exp(angle * 1j)
+
+        # we will rotate about x,y
+        center = complex(x + 78, y + 158)
+
+        self._rotated_points = []
+        for x, y in grouper(self._points, 2):
+            v = cangle * (complex(x, y) - center) + center
+            self._rotated_points.extend((v.real, v.imag))
+
+        self._items['orange_snake'] = GPolygonItem(self.gcanvas, self._rotated_points, self._tag)
+        self._items['orange_snake'].add()
+        self._items['orange_snake'].fill_color = '#FFD43B'
+        self._items['orange_snake'].outline_color = '#FFD43B'
+        self._items['orange_snake'].active_outline_color = '#FFD43B'
+        self._items['orange_snake'].outline_width = 1.0
+        self._items['orange_snake'].active_outline_width = 1.0
+        self._items['orange_snake'].hidden = False
+        self._items['orange_snake'].draggable = True
+        self._items['orange_snake'].show_selection = False
+        self._items['orange_snake'].show_highlight = False
+
+
+
 

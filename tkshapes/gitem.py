@@ -283,12 +283,9 @@ class GItem:
         else:
             self._gcanvas.canvas.dtag(self._canvas_item, "highlightable")
 
-# TODO: GLineItem and GLineItem2 both need to be re-done to support multiple ways of creating lines
-# TODO:  Really, GLineItem is currently a GHorizontalSegment and needs to go away, and be generalized
-# TODO: into the real GLineItem, currently called GLineItem2.
 
-class GLineItem(GItem):
-    """ Basic straight line draws itself on a GCanvas """
+class GHorzLineItem(GItem):
+    """ Single-segment Horizontal line draws itself on a GCanvas """
 
     def __init__(self, gcanvas, initial_x, initial_y, length, name_tag=None):
         super().__init__(gcanvas, initial_x, initial_y, name_tag)
@@ -300,11 +297,6 @@ class GLineItem(GItem):
 
         # attributes unique to the GLine
         self.length = length
-
-        # TODO: need to implement angle, and also the ability to specify two points, rather than length
-        # TODO: we should convert to using kwargs so we can pass in alternate specifications
-        self.angle = 0
-
         self.coords = [(self._x, self._y), (self._x + self.length, self._y)]
 
     def add(self):
@@ -321,8 +313,36 @@ class GLineItem(GItem):
         self.highlightable = False
 
 
-class GLineItem2(GItem):
-    """ Temporary hack to draw a line using list of points """
+class GVertLineItem(GItem):
+    """ Single-segment Vertical line draws itself on a GCanvas """
+
+    def __init__(self, gcanvas, initial_x, initial_y, length, name_tag=None):
+        super().__init__(gcanvas, initial_x, initial_y, name_tag)
+
+        # initialize properties
+        self.outline_width = 2.0
+        self.show_selection = False
+        self.show_highlight = False
+
+        # attributes unique to the GLine
+        self.length = length
+        self.coords = [(self._x, self._y), (self._x, self._y + self.length)]
+
+    def add(self):
+        self._canvas_item = self._gcanvas.canvas.create_line(
+            self.coords,
+            fill=self._outline_color,
+            width=self.outline_width,
+            activewidth=self.outline_width,
+            state=self._item_state,
+            tags=self._tag)
+
+        # the item should NOT be raisable by default unless overridden in the GObject
+        self.raisable = False
+        self.highlightable = False
+
+class GLineItem(GItem):
+    """ Multi-segment line defined by list of points draws itself on a GCanvas """
 
     def __init__(self, gcanvas, points, name_tag=None):
         initial_x, initial_y = points[0]

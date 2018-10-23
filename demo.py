@@ -8,7 +8,6 @@ from tkapp import AppRootWindow
 from tkshapes import (
     GCanvas,
     GGraphPaper,
-    GFoo,
     GRect,
     GOval,
     GBufferGate,
@@ -16,6 +15,7 @@ from tkshapes import (
     GAndGate,
     GOrGate,
     GXOrGate,
+    GPythonLogo,
 )
 
 root = tk.Tk()
@@ -43,7 +43,6 @@ gcanvas.register_status_var(status_text)
 # GCanvas so the GCanvas knows all of the valid kinds of shapes we can create on the canvas.
 # Then we can call the new method like this:
 gcanvas.register_gobject('GGraphPaper', GGraphPaper)
-gcanvas.register_gobject('GFoo', GFoo)
 gcanvas.register_gobject('GRect', GRect)
 gcanvas.register_gobject('GOval', GOval)
 gcanvas.register_gobject('GBufferGate', GBufferGate)
@@ -51,6 +50,7 @@ gcanvas.register_gobject('GNotGate', GNotGate)
 gcanvas.register_gobject('GAndGate', GAndGate)
 gcanvas.register_gobject('GOrGate', GOrGate)
 gcanvas.register_gobject('GXOrGate', GXOrGate)
+gcanvas.register_gobject('GPythonLogo', GPythonLogo)
 
 # The 'BACKGROUND' name will associate this GObject with the immovable background items
 graph_paper = gcanvas.create('GGraphPaper', 0, 0, 10000, 10000, name="BACKGROUND")
@@ -70,27 +70,27 @@ graph_paper.show()
 # TODO: of a label, which could be used for display only, but we want to hide the implementation
 # TODO: details of how the name is currently used as an underlying canvas item tag.
 
-circle1 = gcanvas.create('GOval', 5320, 5100, 100, 100, name="Circle1")
+circle1 = gcanvas.create('GOval', 5260, 5100, 100, 100, name="Circle1")
 circle1.add_mouse_bindings()
 circle1.show()
 
-circle2 = gcanvas.create('GOval', 5310, 5200, 50, 50, name="Circle2")
+circle2 = gcanvas.create('GOval', 5230, 5200, 50, 50, name="Circle2")
 circle2.add_mouse_bindings()
 circle2.show()
 
-circle3 = gcanvas.create('GOval', 5300, 5250, 20, 20, name="Circle3")
+circle3 = gcanvas.create('GOval', 5210, 5250, 20, 20, name="Circle3")
 circle3.add_mouse_bindings()
 circle3.show()
 
-oval1 = gcanvas.create('GOval', 5200, 5200, 20, 30, name="Oval1")
+oval1 = gcanvas.create('GOval', 5200, 5300, 20, 30, name="Oval1")
 oval1.add_mouse_bindings()
 oval1.show()
 
-oval2 = gcanvas.create('GOval', 5200, 5250, 50, 40, name="Oval2")
+oval2 = gcanvas.create('GOval', 5200, 5350, 50, 40, name="Oval2")
 oval2.add_mouse_bindings()
 oval2.show()
 
-oval3 = gcanvas.create('GOval', 5200, 5300, 100, 130, name="Oval3")
+oval3 = gcanvas.create('GOval', 5200, 5400, 100, 130, name="Oval3")
 oval3.add_mouse_bindings()
 oval3.show()
 
@@ -106,37 +106,29 @@ square3 = gcanvas.create('GRect', 5675, 5250, 25, 25, name="Square3")
 square3.add_mouse_bindings()
 square3.show()
 
-foo1 = gcanvas.create('GFoo', 5500, 5100, 50, name="Foo1")
-foo1.add_mouse_bindings()
-foo1.show()
-
-foo2 = gcanvas.create('GFoo', 5500, 5200, 100, name="Foo2")
-foo2.add_mouse_bindings()
-foo2.show()
-
-foo3 = gcanvas.create('GFoo', 5500, 5350, 150, name="Foo3")
-foo3.add_mouse_bindings()
-foo3.show()
-
-gate1 = gcanvas.create('GBufferGate', 5100, 5100, name="BufferGate1")
+gate1 = gcanvas.create('GBufferGate', 5060, 5040, name="BufferGate1")
 gate1.add_mouse_bindings()
 gate1.show()
 
-gate2 = gcanvas.create('GNotGate', 5100, 5175, name="NotGate1")
+gate2 = gcanvas.create('GNotGate', 5200, 5040, name="NotGate1")
 gate2.add_mouse_bindings()
 gate2.show()
 
-gate3 = gcanvas.create('GAndGate', 5100, 5250, name="AndGate1")
+gate3 = gcanvas.create('GAndGate', 5060, 5140, name="AndGate1")
 gate3.add_mouse_bindings()
 gate3.show()
 
-gate4 = gcanvas.create('GOrGate', 5100, 5325, name="OrGate1")
+gate4 = gcanvas.create('GOrGate', 5053, 5240, name="OrGate1")
 gate4.add_mouse_bindings()
 gate4.show()
 
-gate5 = gcanvas.create('GXOrGate', 5100, 5400, name="XOrGate1")
+gate5 = gcanvas.create('GXOrGate', 5060, 5340, name="XOrGate1")
 gate5.add_mouse_bindings()
 gate5.show()
+
+logo = gcanvas.create('GPythonLogo', 5400, 5200, name="TwoSnakes")
+logo.add_mouse_bindings()
+logo.show()
 
 # Print some debug info
 gcanvas.known_types()
