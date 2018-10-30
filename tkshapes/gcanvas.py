@@ -29,6 +29,9 @@ class GCanvas(tk.Frame):
         # Where to send status messages
         self.status_var = None
 
+        # Zoom Level
+        self.zoom_level = 1.0
+
         # Remember our canvas dimensions (will change when we zoom in/out)
         self.canvas_width = canvas_width
         self.canvas_height = canvas_height
@@ -117,6 +120,26 @@ class GCanvas(tk.Frame):
         for g in self.gobjects.keys():
             print(f"     GObject = {g}")
 
+    def get_gobject_by_id(self, id):
+        for g_object in self.gobjects.values():
+            if g_object._tag == 'BACKGROUND':
+                continue
+            #print(f"DEBUG: Checking GObject {g_object}")
+            found = g_object.get_item_by_id(id)
+            if found:
+                return g_object
+        return None
+
+    def get_item_by_id(self, id):
+        for g_object in self.gobjects.values():
+            if g_object._tag == 'BACKGROUND':
+                continue
+            #print(f"DEBUG: Checking GObject {g_object}")
+            found = g_object.get_item_by_id(id)
+            if found:
+                return found
+        return None
+
     def create(self, a_type, *args, **kwargs):
 
         # Get the requested GObject type from the factory
@@ -190,6 +213,7 @@ class GCanvas(tk.Frame):
             sf = 0.9  # Just a tad less than 1
 
         if sf != 1.0:
+            self.zoom_level *= sf
             for gobject in self.gobjects.values():
                 gobject.scale(cx, cy, sf, sf)
 
@@ -197,6 +221,10 @@ class GCanvas(tk.Frame):
         # the background, have been scaled up or down, and since it's that background that
         # determines our scroll region, we have to adjust it every time we zoom in or out.
         self.canvas.configure(scrollregion=self.canvas.bbox(self.tag))
+
+        # Show current Zoom Level in the status bar
+        if self.status_var:
+            self.status_var.set(f"Zoom Level: {self.zoom_level}")
 
     def on_button_press(self, event):
         # Clear any current selection first

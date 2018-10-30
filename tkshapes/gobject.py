@@ -46,7 +46,19 @@ class GObject:
         self._canvas_item_id_to_gitem = {}
 
         # Keep track of a canvas object being dragged
-        self._drag_data = {"x": 0, "y": 0, "item": None}
+        self._drag_data = {
+            "x": 0,
+            "y": 0,
+            "item": None
+        }
+
+        # Keep track of a connection as we are selecting the starting and ending points
+        self._connection_data = {
+            "start_x": 0,
+            "start_y": 0,
+            "line1": None,
+            "line2": None,
+        }
 
         # NOTE: selection is done at the GObject level, but we also keep track of each GItem's
         # NOTE: selection status.
@@ -129,6 +141,11 @@ class GObject:
         self.gcanvas.canvas.tag_bind(self._tag + ":draggable", "<ButtonRelease-1>", self.on_button_release)
         self.gcanvas.canvas.tag_bind(self._tag + ":draggable", "<B1-Motion>", self.on_button_motion)
 
+        # add bindings for making connections
+        self.gcanvas.canvas.tag_bind(self._tag + ":connectable", "<ButtonPress-1>", self.on_start_connection)
+        self.gcanvas.canvas.tag_bind(self._tag + ":connectable", "<ButtonRelease-1>", self.on_end_connection)
+        self.gcanvas.canvas.tag_bind(self._tag + ":connectable", "<B1-Motion>", self.on_making_connection)
+
         # add bindings for right-click (could eventually be used for context-sensitive menus)
         # TODO: not used yet, but we may want to use different callbacks to keep the code separate from
         # TODO: the click-drag-release code.  Otherwise use event.num to detect what button is being pressed.
@@ -141,6 +158,120 @@ class GObject:
 
         # add binding to handle Selection virtual events from a selection box
         self.gcanvas.canvas.bind("<<Selection>>", self.on_selection_event, "+")
+
+    def on_start_connection(self, event):
+        """ Initiate connection """
+        print(f"DEBUG: BEGIN CONNECTION - Button-{event.num} Item: {event.widget.find_withtag('current')}")
+        self._drag_data["item"] = event.widget.find_withtag('current')
+        self._drag_data["x"] = event.x
+        self._drag_data["y"] = event.y
+
+        # convert from screen coords to canvas coords
+        x = self.gcanvas.canvas.canvasx(event.x)
+        y = self.gcanvas.canvas.canvasy(event.y)
+        self._connection_data["start_x"] = x
+        self._connection_data["start_y"] = y
+
+    def on_end_connection(self, event):
+        """ Terminate connection """
+
+        if self._connection_data["line1"] is not None:
+            self.gcanvas.canvas.delete(self._connection_data["line1"])
+
+        if self._connection_data["line2"] is not None:
+            self.gcanvas.canvas.delete(self._connection_data["line2"])
+
+        # convert from screen coords to canvas coords
+        x = self.gcanvas.canvas.canvasx(event.x)
+        y = self.gcanvas.canvas.canvasy(event.y)
+        connect_to_item = self.gcanvas.canvas.find_closest(x, y)
+        g_object = self.gcanvas.get_gobject_by_id(connect_to_item)
+        g_item = g_object.get_item_by_id(connect_to_item)
+
+        print(f"DEBUG: END CONNECTION - Button-{event.num}")
+        print(f"       --> GObject: {g_object}")
+        print(f"       -->   GItem: {g_item} {connect_to_item}")
+        print(f"       -->   Start: {int(self._connection_data['start_x'])} x {int(self._connection_data['start_y'])}")
+        print(f"       -->     End: {int(x)} x {int(y)}")
+
+        #
+        # Check that the GObject and GItem are "connectable" and then establish the connection with a method call
+        # We will need some attribute that keeps track of connections
+        # Connections are made at the GItem level, so, in-theory a single GObject could have multiple
+        # outbound connections from different GItems.  Also, a single GItem could have multiple connections
+        # outbound from it.  We could keep track of the connections in a list.  We should also have a property
+        # that specifies the max_connection_count for each connectable GItem.  In the case of digital logic circuits
+        # our Gate outputs can have multiple connections outbound, but Gate inputs can have exactly one connection, so
+        # we need to be able to enforce this.
+        #
+        # We may also want to consider having different connection types, such as Wire or Arrow, DottedLine, etc.
+        #
+        # We may also want to differentiate the GItems where we can initiate a connection FROM, from those GItems
+        # where we can terminate a connection.  This could be accomplished by having two properties
+        # connectable_output and connectable_input, rather than just the single "connectable".  Will figure this
+        # part out as we get further into the implementation...
+        #
+
+        # update status var
+        if self.gcanvas.status_var:
+            self.gcanvas.status_var.set(f"Terminate Connection {self._tag} at {x}x{y}")
+
+        self._drag_data["item"] = None
+        self._drag_data["x"] = 0
+        self._drag_data["y"] = 0
+
+    def on_making_connection(self, event):
+        """ Moving from start point to end point of the connection """
+
+        # This handler could be triggered by an accidental B1-Motion event while Command-Clicking to [de]select
+        if self._drag_data["item"] is None:
+            return
+
+        # convert from screen coords to canvas coords
+        x = self.gcanvas.canvas.canvasx(event.x)
+        y = self.gcanvas.canvas.canvasy(event.y)
+
+        #
+        # TODO: This is where we should draw the connection wire/line using whatever connection_style is set
+        #
+        # TODO: Need to grab the center point of the connectable oval so that we can start drawing our line
+        # TODO: from the exact center point to make it pretty.  For now, we'll just start drawing it from the
+        # TODO: point our mouse pointer clicked at, which could be off-center quite a bit.
+        self.draw_connection((x,y))
+
+        # update status var
+        if self.gcanvas.status_var:
+            self.gcanvas.status_var.set(f"Making Connection {self._tag} at {x} x {y}")
+
+    def draw_connection(self, point):
+        x, y = point
+        zl = self.gcanvas.zoom_level
+        line_width1 = zl * 5.0
+        line_width2 = zl * 2.0
+
+        if self._connection_data["line1"] is not None:
+            self.gcanvas.canvas.delete(self._connection_data["line1"])
+
+        if self._connection_data["line2"] is not None:
+            self.gcanvas.canvas.delete(self._connection_data["line2"])
+
+        # These are the points we will use to draw our lines
+        points = (
+            (self._connection_data["start_x"], self._connection_data["start_y"]),
+            (self._connection_data["start_x"] + (zl * 20), self._connection_data["start_y"]),
+            (x - (zl * 20), y),
+            (x, y),
+        )
+
+        self._connection_data["line1"] = self.gcanvas.canvas.create_line(
+            points, width=line_width1, fill='blue', capstyle="round", smooth=True, splinesteps=20)
+
+        self._connection_data["line2"] = self.gcanvas.canvas.create_line(
+            points, width=line_width2, fill='white', capstyle="round", smooth=True, splinesteps=20)
+
+        self.gcanvas.canvas.tag_raise(self._connection_data["line1"])
+        self.gcanvas.canvas.tag_raise(self._connection_data["line2"])
+
 
     def on_button_press(self, event):
         """ Beginning drag of an object - record the item and its location """
@@ -450,6 +581,7 @@ class GBufferGate(GObject):
         self._items['output_dot'].active_outline_width = 5.0
         self._items['output_dot'].hidden = False
         self._items['output_dot'].draggable = False
+        self._items['output_dot'].connectable = True
         self._items['output_dot'].show_selection = False
 
         self._items['input_line'] = GHorzLineItem(self.gcanvas, self._x, self._y + 28, -10, self._tag)
@@ -512,6 +644,7 @@ class GNotGate(GObject):
         self._items['output_dot'].active_outline_width = 5.0
         self._items['output_dot'].hidden = False
         self._items['output_dot'].draggable = False
+        self._items['output_dot'].connectable = True
         self._items['output_dot'].show_selection = False
 
         self._items['input_line'] = GHorzLineItem(self.gcanvas, self._x, self._y + 28, -10, self._tag)
@@ -605,6 +738,7 @@ class GOrGate(GObject):
         self._items['output_dot'].active_outline_width = 5.0
         self._items['output_dot'].hidden = False
         self._items['output_dot'].draggable = False
+        self._items['output_dot'].connectable = True
         self._items['output_dot'].show_selection = False
 
         self._items['input_line1'] = GHorzLineItem(self.gcanvas, self._x + 7, self._y + 17, -10, self._tag)
@@ -711,6 +845,7 @@ class GXOrGate(GObject):
         self._items['output_dot'].active_outline_width = 5.0
         self._items['output_dot'].hidden = False
         self._items['output_dot'].draggable = False
+        self._items['output_dot'].connectable = True
         self._items['output_dot'].show_selection = False
 
         self._items['input_line1'] = GHorzLineItem(self.gcanvas, self._x, self._y + 17, -10, self._tag)
@@ -814,6 +949,7 @@ class GAndGate(GObject):
         self._items['output_dot'].active_outline_width = 5.0
         self._items['output_dot'].hidden = False
         self._items['output_dot'].draggable = False
+        self._items['output_dot'].connectable = True
         self._items['output_dot'].show_selection = False
 
         self._items['input_line1'] = GHorzLineItem(self.gcanvas, self._x, self._y + 17, -10, self._tag)
@@ -880,13 +1016,17 @@ class GRect(GObject):
 
     def add(self):
 
+        # Adjust width and height for current zoom level
+        self._width *= self.gcanvas.zoom_level
+        self._height *= self.gcanvas.zoom_level
+
         self._items['GRect'] = GRectItem(self.gcanvas, self._x, self._y, self._width, self._height, self._tag)
         self._items['GRect'].add()
         self._items['GRect'].fill_color = 'white'
         self._items['GRect'].outline_color = 'blue'
         self._items['GRect'].active_outline_color = 'orange'
-        self._items['GRect'].outline_width = 2.0
-        self._items['GRect'].active_outline_width = 5.0
+        self._items['GRect'].outline_width = 2.0 * self.gcanvas.zoom_level
+        self._items['GRect'].active_outline_width = 5.0 * self.gcanvas.zoom_level
         self._items['GRect'].hidden = False
         self._items['GRect'].draggable = True
         self._items['GRect'].show_selection = True
@@ -912,13 +1052,17 @@ class GOval(GObject):
 
     def add(self):
 
+        # Adjust width and height for current zoom level
+        self._width *= self.gcanvas.zoom_level
+        self._height *= self.gcanvas.zoom_level
+
         self._items['GOval'] = GOvalItem(self.gcanvas, self._x, self._y, self._width, self._height, self._tag)
         self._items['GOval'].add()
         self._items['GOval'].fill_color = 'white'
         self._items['GOval'].outline_color = 'blue'
         self._items['GOval'].active_outline_color = 'orange'
-        self._items['GOval'].outline_width = 2.0
-        self._items['GOval'].active_outline_width = 5.0
+        self._items['GOval'].outline_width = 2.0 * self.gcanvas.zoom_level
+        self._items['GOval'].active_outline_width = 5.0 * self.gcanvas.zoom_level
         self._items['GOval'].hidden = False
         self._items['GOval'].draggable = True
         self._items['GOval'].show_selection = True
@@ -1005,6 +1149,9 @@ class GPythonLogo(GObject):
         super().__init__(initial_x, initial_y, name_tag)
 
         self._points = []
+        self._rotated_points = []
+        self._zoomed_points = []
+        self._zoomed_rotated_points = []
 
     def add(self):
 
@@ -1058,7 +1205,20 @@ class GPythonLogo(GObject):
 
         self._points.extend((x + 32, y + 68))
 
-        self._items['blue_snake'] = GPolygonItem(self.gcanvas, self._points, self._tag)
+        # the mathematical formulas to scale a point (x,y) by a factor of S relative to the point (cx, cy) are:
+        # x_new = (S * (x - cx)) + cx
+        # y_new = (S * (y - cy)) + cy
+
+        cx = x + 78
+        cy = y + 158
+
+        self._zoomed_points = []
+        for xx, yy in grouper(self._points, 2):
+            x_new = (self.gcanvas.zoom_level * (xx - cx)) + cx
+            y_new = (self.gcanvas.zoom_level * (yy - cy)) + cy
+            self._zoomed_points.extend((x_new, y_new))
+
+        self._items['blue_snake'] = GPolygonItem(self.gcanvas, self._zoomed_points, self._tag)
         self._items['blue_snake'].add()
         self._items['blue_snake'].fill_color = '#4B8BBE'
         self._items['blue_snake'].outline_color = '#4B8BBE'
@@ -1070,20 +1230,41 @@ class GPythonLogo(GObject):
         self._items['blue_snake'].show_selection = False
         self._items['blue_snake'].show_highlight = False
 
+        #
+        # Center Point for Testing
+        #
+        #self._width = 1 * self.gcanvas.zoom_level
+        #self._height = 1 * self.gcanvas.zoom_level
+        #self._items['GOval'] = GOvalItem(self.gcanvas, self._x + 78, self._y + 158, self._width, self._height, self._tag)
+        #self._items['GOval'].add()
+        #self._items['GOval'].fill_color = 'white'
+        #self._items['GOval'].outline_color = 'blue'
+        #self._items['GOval'].active_outline_color = 'orange'
+        #self._items['GOval'].outline_width = 2.0 * self.gcanvas.zoom_level
+        #self._items['GOval'].active_outline_width = 5.0 * self.gcanvas.zoom_level
+        #self._items['GOval'].hidden = False
+        #self._items['GOval'].draggable = True
+        #self._items['GOval'].show_selection = True
+
         # I want to make a second snake rotated 180 degrees
         # See: http://effbot.org/zone/tkinter-complex-canvas.htm
         angle = 3.14159  # 3.14159 radians = 180 degrees
         cangle = cmath.exp(angle * 1j)
 
         # we will rotate about x,y
-        center = complex(x + 78, y + 158)
-
+        center = complex(cx, cy)
         self._rotated_points = []
-        for x, y in grouper(self._points, 2):
-            v = cangle * (complex(x, y) - center) + center
+        for xx, yy in grouper(self._points, 2):
+            v = cangle * (complex(xx, yy) - center) + center
             self._rotated_points.extend((v.real, v.imag))
 
-        self._items['orange_snake'] = GPolygonItem(self.gcanvas, self._rotated_points, self._tag)
+        self._zoomed_rotated_points = []
+        for xx, yy in grouper(self._rotated_points, 2):
+            x_new = (self.gcanvas.zoom_level * (xx - cx)) + cx
+            y_new = (self.gcanvas.zoom_level * (yy - cy)) + cy
+            self._zoomed_rotated_points.extend((x_new, y_new))
+
+        self._items['orange_snake'] = GPolygonItem(self.gcanvas, self._zoomed_rotated_points, self._tag)
         self._items['orange_snake'].add()
         self._items['orange_snake'].fill_color = '#FFD43B'
         self._items['orange_snake'].outline_color = '#FFD43B'

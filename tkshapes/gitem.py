@@ -255,6 +255,10 @@ class GItem:
     @connectable.setter
     def connectable(self, value):
         self._connectable = bool(value)
+        if value:
+            self._gcanvas.canvas.addtag_withtag(self._tag + ":connectable", self._canvas_item)
+        else:
+            self._gcanvas.canvas.dtag(self._canvas_item, self._tag + ":connectable")
 
     @property
     def raisable(self):
