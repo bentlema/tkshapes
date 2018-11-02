@@ -16,6 +16,7 @@ from tkshapes import (
     GOrGate,
     GXOrGate,
     GPythonLogo,
+    GWire,
 )
 
 root = tk.Tk()
@@ -51,6 +52,7 @@ gcanvas.register_gobject('GAndGate', GAndGate)
 gcanvas.register_gobject('GOrGate', GOrGate)
 gcanvas.register_gobject('GXOrGate', GXOrGate)
 gcanvas.register_gobject('GPythonLogo', GPythonLogo)
+gcanvas.register_gobject('GWire', GWire)
 
 # The 'BACKGROUND' name will associate this GObject with the immovable background items
 graph_paper = gcanvas.create('GGraphPaper', 0, 0, 10000, 10000, name="BACKGROUND")
@@ -114,6 +116,13 @@ gate2 = gcanvas.create('GNotGate', 5200, 5040, name="NotGate1")
 gate2.add_mouse_bindings()
 gate2.show()
 
+#wire1 = gcanvas.create('GWire', (5000, 5000, 5100, 5100), name="GWire1")
+#wire2 = gcanvas.create('GWire', (5010, 5010, 5110, 5110), name="GWire2")
+#wire3 = gcanvas.create('GWire', (5020, 5020, 5120, 5120), name="GWire3")
+
+#wire1.connect(gate1.node("output"), gate2.node("input"))
+#wire1.update()
+
 gate3 = gcanvas.create('GAndGate', 5060, 5140, name="AndGate1")
 gate3.add_mouse_bindings()
 gate3.show()
@@ -122,9 +131,15 @@ gate4 = gcanvas.create('GOrGate', 5053, 5240, name="OrGate1")
 gate4.add_mouse_bindings()
 gate4.show()
 
+#wire2.connect(gate2.node("output"), gate4.node("input_1"))
+#wire2.update()
+
 gate5 = gcanvas.create('GXOrGate', 5060, 5340, name="XOrGate1")
 gate5.add_mouse_bindings()
 gate5.show()
+
+#wire3.connect(gate4.node("output"), gate5.node("input_2"))
+#wire3.update()
 
 logo = gcanvas.create('GPythonLogo', 5400, 5200, name="TwoSnakes")
 logo.add_mouse_bindings()

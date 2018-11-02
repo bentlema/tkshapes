@@ -49,13 +49,15 @@ class GItem:
         self._highlight_group = None
 
         # various properties
-        self._show_selection = True       # if the GItem changes color when selected
-        self._show_highlight = True       # if the GItem shows when it is "active" or not
-        self._draggable = True            # if the GItem can be click-Dragged
-        self._clickable = True            # if the GItem can be clicked
-        self._connectable = False         # if the GItem can be connected to another GItem
-        self._highlightable = True        # if the GItem is highlightable (only GItems with "outline" are)
-        self._raisable = True             # if the GItem should be raised upon <Enter> event
+        self._show_selection = True           # if the GItem changes color when selected
+        self._show_highlight = True           # if the GItem shows when it is "active" or not
+        self._draggable = True                # if the GItem can be click-Dragged
+        self._clickable = True                # if the GItem can be clicked
+        self._highlightable = True            # if the GItem is highlightable (only GItems with "outline" are)
+        self._raisable = True                 # if the GItem should be raised upon <Enter> event
+        self._always_on_top = False           # if the GItem should always be raised to the top upon <Enter> of any
+        self._connectable_initiator = False   # if the GItem can be the initiator of a connector
+        self._connectable_terminator = False  # if the GItem can be the termination point of a connector
 
     def hide(self):
         # Setting my own property
@@ -64,6 +66,25 @@ class GItem:
     def show(self):
         # Setting my own property
         self.hidden = False
+
+    def redraw(self):
+        pass
+
+    def raise_up(self):
+        self._gcanvas.canvas.tag_raise(self._canvas_item)
+
+    def center_point(self):
+        """ return center point of the GItem based on bbox """
+        bbox = self._gcanvas.canvas.bbox(self._canvas_item)
+        x1 = bbox[0]
+        y1 = bbox[1]
+        x2 = bbox[2]
+        y2 = bbox[3]
+        bbox_x = x2 - x1
+        bbox_y = y2 - y1
+        mid_x = x1 + (bbox_x // 2)
+        mid_y = y1 + (bbox_y // 2)
+        return (mid_x, mid_y)
 
     @property
     def highlighted(self):
@@ -130,7 +151,10 @@ class GItem:
     def outline_color(self, value):
         self._outline_color = value
         if self._canvas_item:
-            self._gcanvas.canvas.itemconfigure(self._canvas_item, outline=value)
+            if self._gcanvas.canvas.type(self._canvas_item) == 'line':
+                self._gcanvas.canvas.itemconfigure(self._canvas_item, fill=value)
+            else:
+                self._gcanvas.canvas.itemconfigure(self._canvas_item, outline=value)
 
     @property
     def active_outline_color(self):
@@ -140,7 +164,10 @@ class GItem:
     def active_outline_color(self, value):
         self._active_outline_color = value
         if self._canvas_item:
-            self._gcanvas.canvas.itemconfigure(self._canvas_item, activeoutline=value)
+            if self._gcanvas.canvas.type(self._canvas_item) == 'line':
+                self._gcanvas.canvas.itemconfigure(self._canvas_item, fill=value)
+            else:
+                self._gcanvas.canvas.itemconfigure(self._canvas_item, activeoutline=value)
 
     @property
     def selected(self):
@@ -249,16 +276,28 @@ class GItem:
         self._clickable = bool(value)
 
     @property
-    def connectable(self):
-        return self._connectable
+    def connectable_initiator(self):
+        return self._connectable_initiator
 
-    @connectable.setter
-    def connectable(self, value):
-        self._connectable = bool(value)
+    @connectable_initiator.setter
+    def connectable_initiator(self, value):
+        self._connectable_initiator = bool(value)
         if value:
-            self._gcanvas.canvas.addtag_withtag(self._tag + ":connectable", self._canvas_item)
+            self._gcanvas.canvas.addtag_withtag(self._tag + ":connectable_initiator", self._canvas_item)
         else:
-            self._gcanvas.canvas.dtag(self._canvas_item, self._tag + ":connectable")
+            self._gcanvas.canvas.dtag(self._canvas_item, self._tag + ":connectable_initiator")
+
+    @property
+    def connectable_terminator(self):
+        return self._connectable_terminator
+
+    @connectable_terminator.setter
+    def connectable_terminator(self, value):
+        self._connectable_terminator = bool(value)
+        if value:
+            self._gcanvas.canvas.addtag_withtag(self._tag + ":connectable_terminator", self._canvas_item)
+        else:
+            self._gcanvas.canvas.dtag(self._canvas_item, self._tag + ":connectable_terminator")
 
     @property
     def raisable(self):
@@ -274,6 +313,21 @@ class GItem:
         else:
             #print(f"Deleting 'raisable' on canvas item {self._canvas_item}")
             self._gcanvas.canvas.dtag(self._canvas_item, "raisable")
+
+    @property
+    def always_on_top(self):
+        return self._always_on_top
+
+    @always_on_top.setter
+    def always_on_top(self, value):
+        """ Tag the canvas items as "always_on_top" so they will raise up when entered """
+        self._always_on_top = bool(value)
+        if value:
+            #print(f"Setting 'always_on_top' on canvas item {self._canvas_item}")
+            self._gcanvas.canvas.addtag_withtag("always_on_top", self._canvas_item)
+        else:
+            #print(f"Deleting 'always_on_top' on canvas item {self._canvas_item}")
+            self._gcanvas.canvas.dtag(self._canvas_item, "always_on_top")
 
     @property
     def highlightable(self):
@@ -371,6 +425,37 @@ class GLineItem(GItem):
         # the item should NOT be raisable by default unless overridden in the GObject
         self.raisable = False
         self.highlightable = False
+
+class GWireItem(GItem):
+    """ Multi-segment Wire defined by list of points draws itself on a GCanvas """
+
+    def __init__(self, gcanvas, points, name_tag=None):
+        #initial_x, initial_y = points[0]
+        super().__init__(gcanvas, 0, 0, name_tag)
+
+        self.coords = points
+
+        # initialize properties
+        self.outline_width = 2.0
+        self.show_selection = False
+        self.show_highlight = False
+
+    def add(self):
+        self._canvas_item = self._gcanvas.canvas.create_line(
+            self.coords,
+            fill=self._outline_color,
+            width=self.outline_width,
+            activewidth=self.outline_width,
+            state=self._item_state,
+            capstyle="round", smooth=True, splinesteps=20,
+            tags=self._tag)
+
+        # the item should NOT be raisable by default unless overridden in the GObject
+        self.raisable = False
+        self.highlightable = False
+
+    def redraw(self):
+        self._gcanvas.canvas.coords(self._canvas_item, self.coords)
 
 
 class GRectItem(GItem):

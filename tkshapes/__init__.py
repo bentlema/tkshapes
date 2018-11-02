@@ -12,12 +12,14 @@ from .gobject import (
     GOrGate,
     GXOrGate,
     GPythonLogo,
+    GWire,
 )
 
 from .gitem import (
     GHorzLineItem,
     GVertLineItem,
     GLineItem,
+    GWireItem,
     GRectItem,
     GOvalItem,
     GPolygonItem,
