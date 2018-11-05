@@ -15,7 +15,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setuptools.setup(
     name='tkshapes',
-    version='0.0.2',
+    version='0.0.3',
     description='Draw and interact with shapes on the Tkinter canvas',
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -29,7 +29,8 @@ setuptools.setup(
         'Programming Language :: Python :: 3.6',
     ],
     keywords='tkinter',
-    packages=setuptools.find_packages(exclude=['contrib', 'docs', 'tests']),
+    packages=setuptools.find_packages(where="src", exclude=['contrib', 'docs', 'tests']),
+    package_dir={"": "src"},
     project_urls={
         'Bug Reports': 'https://github.com/bentlema/tkshapes/issues',
         'Source': 'https://github.com/bentlema/tkshapes/',
