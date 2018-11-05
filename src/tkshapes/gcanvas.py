@@ -106,7 +106,7 @@ class GCanvas(tk.Frame):
 
     def register_gobject(self, name, a_class):
         self.gobject_types[name] = a_class
-        print(f"Registered {name} which is a {a_class}")
+        #print(f"Registered {name} which is a {a_class}")
 
     def known_types(self):
         print("Known GObject types:")
@@ -153,7 +153,7 @@ class GCanvas(tk.Frame):
 
         # The name is passed in via a keyword arg
         name = kwargs['name']
-        print(f"DEBUG: GCanvas.create():  {name} = {gobject}")
+        #print(f"DEBUG: GCanvas.create():  {name} = {gobject}")
 
         # GCanvas will remember what GObjects it holds in gobjects Dictionary
         self.gobjects[name] = gobject

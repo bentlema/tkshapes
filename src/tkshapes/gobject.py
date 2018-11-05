@@ -151,7 +151,7 @@ class GObject:
     def on_start_connection(self, event):
         """ Initiate connection """
         canvas_item = event.widget.find_withtag('current')
-        print(f"DEBUG: BEGIN CONNECTION - Button-{event.num} Item: {canvas_item}")
+        #print(f"DEBUG: BEGIN CONNECTION - Button-{event.num} Item: {canvas_item}")
         self._drag_data["item"] = canvas_item
         self._drag_data["x"] = event.x
         self._drag_data["y"] = event.y
@@ -177,11 +177,11 @@ class GObject:
         from_g_object = self.gcanvas.get_gobject_by_id(connect_from_item)
         from_g_item = from_g_object.get_item_by_id(connect_from_item)
         from_node_name = from_g_object.get_node_name_by_g_item(from_g_item)
-        print(f"DEBUG: START CONNECTION")
-        print(f"       --> GObject: {from_g_object}")
-        print(f"       -->   GItem: {from_g_item} {connect_from_item}")
-        print(f"       -->   GNode: {from_node_name}")
-        print(f"       -->   Start: {int(self._connection_data['start_x'])} x {int(self._connection_data['start_y'])}")
+        #print(f"DEBUG: START CONNECTION")
+        #print(f"       --> GObject: {from_g_object}")
+        #print(f"       -->   GItem: {from_g_item} {connect_from_item}")
+        #print(f"       -->   GNode: {from_node_name}")
+        #print(f"       -->   Start: {int(self._connection_data['start_x'])} x {int(self._connection_data['start_y'])}")
 
         x, y = self.screen_to_canvas_coords(event.x, event.y)
 
@@ -203,7 +203,7 @@ class GObject:
         if to_g_item and to_g_item.connectable_terminator:
             to_node_name = to_g_object.get_node_name_by_g_item(to_g_item)
         else:
-            print(f"DEBUG: GItem is NOT a connection_terminator")
+            #print(f"DEBUG: GItem is NOT a connection_terminator")
             # reject the GItem
             to_node_name = None
 
@@ -211,11 +211,11 @@ class GObject:
         # TODO: max_nodes for GConnection objects.
 
         if to_node_name:
-            print(f"DEBUG: END CONNECTION - Button-{event.num}")
-            print(f"       --> GObject: {to_g_object}")
-            print(f"       -->   GItem: {to_g_item} {connect_to_item}")
-            print(f"       -->   GNode: {to_node_name}")
-            print(f"       -->     End: {int(x)} x {int(y)}")
+            #print(f"DEBUG: END CONNECTION - Button-{event.num}")
+            #print(f"       --> GObject: {to_g_object}")
+            #print(f"       -->   GItem: {to_g_item} {connect_to_item}")
+            #print(f"       -->   GNode: {to_node_name}")
+            #print(f"       -->     End: {int(x)} x {int(y)}")
 
             coords = (
                 int(self._connection_data['start_x']),
@@ -226,9 +226,9 @@ class GObject:
 
             # TODO: add a method to get GObject name, rather than use protected member "_tag" directly
             new_wire_name = from_g_object._tag + "_" + from_node_name + "__to__" + to_g_object._tag + "_" + to_node_name
-            print(f"DEBUG: FINALIZE CONNECTION")
-            print(f"       -->     Coords: {coords}")
-            print(f"       -->       Name: {new_wire_name}")
+            #print(f"DEBUG: FINALIZE CONNECTION")
+            #print(f"       -->     Coords: {coords}")
+            #print(f"       -->       Name: {new_wire_name}")
             new_wire = self.gcanvas.create('GWire', coords, name=new_wire_name)
 
             new_wire.connect(
@@ -237,8 +237,9 @@ class GObject:
             )
             new_wire.update()
         else:
-            print(f"DEBUG: END CONNECTION - Button-{event.num}")
-            print(f"       --> Where?")
+            #print(f"DEBUG: END CONNECTION - Button-{event.num}")
+            #print(f"       --> Where?")
+            pass
 
         # update status var
         if self.gcanvas.status_var:
@@ -426,9 +427,10 @@ class GObject:
 
         if self.selectable:
             self.toggle_selected()
-            print("Item ID {} --> Command-Clicked --> Selected? {}".format(clicked_item, self._selected))
+            #print("Item ID {} --> Command-Clicked --> Selected? {}".format(clicked_item, self._selected))
         else:
-            print("Item {} not selectable.".format(clicked_item))
+            #print("Item {} not selectable.".format(clicked_item))
+            pass
 
     def raise_up(self):
         for g_item_name in self._items:
@@ -571,17 +573,18 @@ class GObject:
 
     def redraw(self):
         """ do whatever is necessary to re-draw the GObject """
-        print(f"DEBUG: Draw GObject {self}")
+        #print(f"DEBUG: Draw GObject {self}")
+        pass
 
     def node(self, name):
         return self._nodes[name]
 
     def connect(self, node1, node2):
         """ connect one GObject's GNode to another """
-        print(f"DEBUG: GObject.connect():")
-        print(f"DEBUG:      GConnection:  {self.connection} g_object: {self.connection.g_object}")
-        print(f"DEBUG:      GNode1: {node1} id: {node1.id} name: '{node1.name}'")
-        print(f"DEBUG:      GNode2: {node2} id: {node2.id} name: '{node2.name}'")
+        #print(f"DEBUG: GObject.connect():")
+        #print(f"DEBUG:      GConnection:  {self.connection} g_object: {self.connection.g_object}")
+        #print(f"DEBUG:      GNode1: {node1} id: {node1.id} name: '{node1.name}'")
+        #print(f"DEBUG:      GNode2: {node2} id: {node2.id} name: '{node2.name}'")
         # At this point, our GConnection, GNode1, and GNode2 objects are
         # not fully populated.  We need to configure some things:
         self.connection.g_nodes = [node1, node2]
