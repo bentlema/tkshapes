@@ -33,7 +33,7 @@ The GCanvas Keyboard and Mouse controls are as follows:
     - Begin to Drag and a wire will appear
     - Drag the wire to an "Input" Node of another shape and release to complete the connection
 
-## Dependancies
+## Installation
 
 Create your Python 3.6+ virtual environment
 
@@ -47,10 +47,10 @@ Activate your virtual env
 source env/bin/activate
 ```
 
-Install tkapp (The demo.py depends on the tkapp module.)
+Install tkapp and tkshapes (The demo.py depends on the tkapp module as well.)
 
 ```
-pip install tkapp
+pip install tkapp tkshapes
 ```
 
 ## Alpha - In-Development
