@@ -11,6 +11,11 @@ from .gobjects.gnotgate import GNotGate
 from .gobjects.gandgate import GAndGate
 from .gobjects.gorgate import GOrGate
 from .gobjects.gxorgate import GXOrGate
+
+from .gobjects.gnandgate import GNandGate
+from .gobjects.gnorgate import GNorGate
+from .gobjects.gxnorgate import GXNorGate
+
 from .gobjects.ggraphpaper import GGraphPaper
 from .gobjects.gpythonlogo import GPythonLogo
 

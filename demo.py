@@ -10,11 +10,10 @@ from tkshapes import (
     GGraphPaper,
     GRect,
     GOval,
-    GBufferGate,
-    GNotGate,
-    GAndGate,
-    GOrGate,
-    GXOrGate,
+    GBufferGate, GNotGate,
+    GAndGate, GNandGate,
+    GOrGate, GNorGate,
+    GXOrGate, GXNorGate,
     GPythonLogo,
     GWire,
 )
@@ -49,8 +48,11 @@ gcanvas.register_gobject('GOval', GOval)
 gcanvas.register_gobject('GBufferGate', GBufferGate)
 gcanvas.register_gobject('GNotGate', GNotGate)
 gcanvas.register_gobject('GAndGate', GAndGate)
+gcanvas.register_gobject('GNandGate', GNandGate)
 gcanvas.register_gobject('GOrGate', GOrGate)
+gcanvas.register_gobject('GNorGate', GNorGate)
 gcanvas.register_gobject('GXOrGate', GXOrGate)
+gcanvas.register_gobject('GXNorGate', GXNorGate)
 gcanvas.register_gobject('GPythonLogo', GPythonLogo)
 gcanvas.register_gobject('GWire', GWire)
 
@@ -72,39 +74,39 @@ graph_paper.show()
 # TODO: of a label, which could be used for display only, but we want to hide the implementation
 # TODO: details of how the name is currently used as an underlying canvas item tag.
 
-circle1 = gcanvas.create('GOval', 5260, 5100, 100, 100, name="Circle1")
+circle1 = gcanvas.create('GOval', 5390, 5100, 100, 100, name="Circle1")
 circle1.add_mouse_bindings()
 circle1.show()
 
-circle2 = gcanvas.create('GOval', 5230, 5200, 50, 50, name="Circle2")
+circle2 = gcanvas.create('GOval', 5360, 5200, 50, 50, name="Circle2")
 circle2.add_mouse_bindings()
 circle2.show()
 
-circle3 = gcanvas.create('GOval', 5210, 5250, 20, 20, name="Circle3")
+circle3 = gcanvas.create('GOval', 5340, 5250, 20, 20, name="Circle3")
 circle3.add_mouse_bindings()
 circle3.show()
 
-oval1 = gcanvas.create('GOval', 5200, 5300, 20, 30, name="Oval1")
+oval1 = gcanvas.create('GOval', 5330, 5300, 20, 30, name="Oval1")
 oval1.add_mouse_bindings()
 oval1.show()
 
-oval2 = gcanvas.create('GOval', 5200, 5350, 50, 40, name="Oval2")
+oval2 = gcanvas.create('GOval', 5330, 5350, 50, 40, name="Oval2")
 oval2.add_mouse_bindings()
 oval2.show()
 
-oval3 = gcanvas.create('GOval', 5200, 5400, 100, 130, name="Oval3")
+oval3 = gcanvas.create('GOval', 5330, 5400, 100, 130, name="Oval3")
 oval3.add_mouse_bindings()
 oval3.show()
 
-square1 = gcanvas.create('GRect', 5600, 5040, 100, 100, name="Square1")
+square1 = gcanvas.create('GRect', 5520, 5030, 100, 100, name="Square1")
 square1.add_mouse_bindings()
 square1.show()
 
-square2 = gcanvas.create('GRect', 5650, 5160, 75, 75, name="Square2")
+square2 = gcanvas.create('GRect', 5650, 5060, 75, 75, name="Square2")
 square2.add_mouse_bindings()
 square2.show()
 
-square3 = gcanvas.create('GRect', 5675, 5250, 25, 25, name="Square3")
+square3 = gcanvas.create('GRect', 5675, 5150, 25, 25, name="Square3")
 square3.add_mouse_bindings()
 square3.show()
 
@@ -116,13 +118,6 @@ gate2 = gcanvas.create('GNotGate', 5200, 5040, name="NotGate1")
 gate2.add_mouse_bindings()
 gate2.show()
 
-#wire1 = gcanvas.create('GWire', (5000, 5000, 5100, 5100), name="GWire1")
-#wire2 = gcanvas.create('GWire', (5010, 5010, 5110, 5110), name="GWire2")
-#wire3 = gcanvas.create('GWire', (5020, 5020, 5120, 5120), name="GWire3")
-
-#wire1.connect(gate1.node("output"), gate2.node("input"))
-#wire1.update()
-
 gate3 = gcanvas.create('GAndGate', 5060, 5140, name="AndGate1")
 gate3.add_mouse_bindings()
 gate3.show()
@@ -131,17 +126,23 @@ gate4 = gcanvas.create('GOrGate', 5053, 5240, name="OrGate1")
 gate4.add_mouse_bindings()
 gate4.show()
 
-#wire2.connect(gate2.node("output"), gate4.node("input_1"))
-#wire2.update()
-
 gate5 = gcanvas.create('GXOrGate', 5060, 5340, name="XOrGate1")
 gate5.add_mouse_bindings()
 gate5.show()
 
-#wire3.connect(gate4.node("output"), gate5.node("input_2"))
-#wire3.update()
+gate6 = gcanvas.create('GNandGate', 5200, 5140, name="NandGate1")
+gate6.add_mouse_bindings()
+gate6.show()
 
-logo = gcanvas.create('GPythonLogo', 5400, 5200, name="TwoSnakes")
+gate7 = gcanvas.create('GNorGate', 5200, 5240, name="NorGate1")
+gate7.add_mouse_bindings()
+gate7.show()
+
+gate8 = gcanvas.create('GXNorGate', 5200, 5340, name="XNorGate1")
+gate8.add_mouse_bindings()
+gate8.show()
+
+logo = gcanvas.create('GPythonLogo', 5500, 5160, name="TwoSnakes")
 logo.add_mouse_bindings()
 logo.show()
 
