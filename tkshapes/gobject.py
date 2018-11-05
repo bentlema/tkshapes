@@ -1,25 +1,3 @@
-import math
-import cmath
-import itertools
-
-from .gitem import (
-    GLineItem,
-    GWireItem,
-    GHorzLineItem,
-    GVertLineItem,
-    GRectItem,
-    GOvalItem,
-    GPolygonItem,
-)
-
-
-def grouper(iterable, n, fillvalue=None):
-    """
-    Collect data into fixed-length chunks or blocks
-    Example:  grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx"
-    """
-    args = [iter(iterable)] * n
-    return itertools.zip_longest(*args, fillvalue=fillvalue)
 
 
 class GObject:
@@ -99,6 +77,11 @@ class GObject:
     def factory(a_class, *args, **kwargs):
         return a_class(*args, **kwargs)
 
+    def screen_to_canvas_coords(self, screen_x, screen_y):
+        canvas_x = self.gcanvas.canvas.canvasx(screen_x)
+        canvas_y = self.gcanvas.canvas.canvasy(screen_y)
+        return canvas_x, canvas_y
+
     # as GItems will be tagged with the parent name tag, we can continue to scale in the same way (i think)
     def scale(self, x_offset, y_offset, x_scale, y_scale):
         """ scale by scale factor x_scale and y_scale relative to point (x_offset, y_offset) """
@@ -136,8 +119,8 @@ class GObject:
         # TODO: GObject), while also keeping to the idea that the selection happens at the GObject-level
         # TODO: the "draggable" property should only be used to specify that a GItem can be clicked-dragged
         # TODO: Generally (at least in the case of logic gates), we'd always click-drag the body of the gate, while
-        # TODO: the input and output components would not be draggable.  Sames goes for "selectable", so the current
-        # TODO: assumption works for now, so I'll leave it until a case comes up where this doens't work.
+        # TODO: the input and output components would not be draggable.  Same goes for "selectable", so the current
+        # TODO: assumption works for now, so I'll leave it until a case comes up where this doesn't work.
 
         # add bindings for selection toggle on/off using Command-Click
         self.gcanvas.canvas.tag_bind(self._tag + ":draggable", "<Command-ButtonPress-1>", self.on_command_button_press)
@@ -177,9 +160,6 @@ class GObject:
         g_item = self.get_item_by_id(canvas_item)
         x, y = g_item.center_point()
 
-        # convert from screen coords to canvas coords
-        #x = self.gcanvas.canvas.canvasx(event.x)
-        #y = self.gcanvas.canvas.canvasy(event.y)
         self._connection_data["start_x"] = x
         self._connection_data["start_y"] = y
 
@@ -203,31 +183,37 @@ class GObject:
         print(f"       -->   GNode: {from_node_name}")
         print(f"       -->   Start: {int(self._connection_data['start_x'])} x {int(self._connection_data['start_y'])}")
 
-        # convert from screen coords to canvas coords
-        x = self.gcanvas.canvas.canvasx(event.x)
-        y = self.gcanvas.canvas.canvasy(event.y)
+        x, y = self.screen_to_canvas_coords(event.x, event.y)
 
         # TODO: we need to check for the closest, but also check for closest that is a GNode, otherwise if there is
-        # TODO: another GWire close by, it could find that one instead.
+        # TODO: another GWire close by, it could find that one instead.  This is less of an issue when the GNode
+        # TODO: circle is raised above the GWire, which is what we are doing, so maybe wont worry about it for now.
         connect_to_item = self.gcanvas.canvas.find_closest(x, y)
 
         if connect_to_item:
-            g_object = self.gcanvas.get_gobject_by_id(connect_to_item)
+            to_g_object = self.gcanvas.get_gobject_by_id(connect_to_item)
+        else:
+            to_g_object = None
 
-        if g_object:
-            g_item = g_object.get_item_by_id(connect_to_item)
+        if to_g_object:
+            to_g_item = to_g_object.get_item_by_id(connect_to_item)
+        else:
+            to_g_item = None
 
-        if g_item and g_item.connectable_terminator:
-            to_node_name = g_object.get_node_name_by_g_item(g_item)
+        if to_g_item and to_g_item.connectable_terminator:
+            to_node_name = to_g_object.get_node_name_by_g_item(to_g_item)
         else:
             print(f"DEBUG: GItem is NOT a connection_terminator")
             # reject the GItem
-            g_item = to_node_name = None
+            to_node_name = None
+
+        # TODO: We need to check and enforce max_connections for GNode objects, and
+        # TODO: max_nodes for GConnection objects.
 
         if to_node_name:
             print(f"DEBUG: END CONNECTION - Button-{event.num}")
-            print(f"       --> GObject: {g_object}")
-            print(f"       -->   GItem: {g_item} {connect_to_item}")
+            print(f"       --> GObject: {to_g_object}")
+            print(f"       -->   GItem: {to_g_item} {connect_to_item}")
             print(f"       -->   GNode: {to_node_name}")
             print(f"       -->     End: {int(x)} x {int(y)}")
 
@@ -239,7 +225,7 @@ class GObject:
             )
 
             # TODO: add a method to get GObject name, rather than use protected member "_tag" directly
-            new_wire_name = from_g_object._tag + "_" + from_node_name + "__to__" + g_object._tag + "_" + to_node_name
+            new_wire_name = from_g_object._tag + "_" + from_node_name + "__to__" + to_g_object._tag + "_" + to_node_name
             print(f"DEBUG: FINALIZE CONNECTION")
             print(f"       -->     Coords: {coords}")
             print(f"       -->       Name: {new_wire_name}")
@@ -247,7 +233,7 @@ class GObject:
 
             new_wire.connect(
                 from_g_object.node(from_node_name),
-                g_object.node(to_node_name)
+                to_g_object.node(to_node_name)
             )
             new_wire.update()
         else:
@@ -270,9 +256,7 @@ class GObject:
         if self._drag_data["item"] is None:
             return
 
-        # convert from screen coords to canvas coords
-        x = self.gcanvas.canvas.canvasx(event.x)
-        y = self.gcanvas.canvas.canvasy(event.y)
+        x, y = self.screen_to_canvas_coords(event.x, event.y)
 
         #
         # TODO: This is where we should draw the connection wire/line using whatever connection_style is set
@@ -307,9 +291,6 @@ class GObject:
 
         self._connection_data["line2"] = self.gcanvas.canvas.create_line(
             points, width=line_width2, fill='white', capstyle="round", smooth=True, splinesteps=20)
-
-        self.gcanvas.canvas.tag_raise(self._connection_data["line1"])
-        self.gcanvas.canvas.tag_raise(self._connection_data["line2"])
 
 
     def on_button_press(self, event):
@@ -432,9 +413,7 @@ class GObject:
         self._drag_data["x"] = event.x
         self._drag_data["y"] = event.y
 
-        # convert from screen coords to canvas coords
-        x = event.widget.canvasx(event.x)
-        y = event.widget.canvasy(event.y)
+        x, y = self.screen_to_canvas_coords(event.x, event.y)
 
         # update status var
         if self.gcanvas.status_var:
@@ -443,11 +422,6 @@ class GObject:
     def on_command_button_press(self, event):
         """ handle Command-Click on a GObject to toggle Selection """
 
-        # convert from screen coords to canvas coords
-        #canvas = event.widget
-        #x = canvas.canvasx(event.x)
-        #y = canvas.canvasy(event.y)
-        #clicked_item = self.gcanvas.canvas.find_closest(x, y)[0]
         clicked_item = self.gcanvas.canvas.find_withtag('current')
 
         if self.selectable:
@@ -455,6 +429,22 @@ class GObject:
             print("Item ID {} --> Command-Clicked --> Selected? {}".format(clicked_item, self._selected))
         else:
             print("Item {} not selectable.".format(clicked_item))
+
+    def raise_up(self):
+        for g_item_name in self._items:
+            g_item = self._items[g_item_name]
+            g_item.raise_up()
+            if g_item.raisable:
+                g_item.raise_up()
+
+    def raise_up_neighbors(self):
+        if self._nodes:
+            for g_node_name in self._nodes:
+                g_node = self._nodes[g_node_name]
+                for g_conn in g_node.connections:
+                    g_conn.g_object.raise_up() # The GWire
+                    for neighbor_g_node in g_conn.g_nodes:
+                        neighbor_g_node.g_object.raise_up()
 
     def raise_with_tag(self, tag):
         items = self.gcanvas.canvas.find_withtag(tag)
@@ -554,25 +544,8 @@ class GObject:
             #        print(f"DEBUG: Leaving GItem: {g_item} with id {g_item.item}")
 
             if direction is "enter" and g_item.raisable:
-                # we should be calling GItem.raise_up() but this is faster
-                self.gcanvas.canvas.tag_raise(self._tag)
-
-                # TODO:  need to come up with some way to always raise up the
-                # TODO:  GWire after raiseing up a GObject upon <Enter>
-                # The following isn't ideal.  The weird case that can happen is
-                # when things overlap, and one GObject is raised over another, but
-                # its wire is "left behind" showing above another.  We could walk
-                # through the connection/node objects and find the neighbors, and
-                # then raise only those.
-                # TODO: write a find_neighbors() method, which would find the next
-                # TODO: hop through nodes/connections, then we should be able to
-                # TODO: call tag_raise like this:
-                #
-                # for neighbor in self.find_neighbors():
-                #     self.gcanvas.canvas.tag_raise(neighbor._tag)
-                #
-                # For now, we'll just do this:
-                self.gcanvas.canvas.tag_raise("always_on_top")
+                self.raise_up_neighbors()
+                self.raise_up()
 
             # (de)highlight the item where the event was triggered by manually setting outline and width
             if g_item.highlightable:
@@ -605,7 +578,7 @@ class GObject:
 
     def connect(self, node1, node2):
         """ connect one GObject's GNode to another """
-        print(f"DEBUG: connect():")
+        print(f"DEBUG: GObject.connect():")
         print(f"DEBUG:      GConnection:  {self.connection} g_object: {self.connection.g_object}")
         print(f"DEBUG:      GNode1: {node1} id: {node1.id} name: '{node1.name}'")
         print(f"DEBUG:      GNode2: {node2} id: {node2.id} name: '{node2.name}'")
@@ -641,17 +614,17 @@ class GObject:
     # TODO: the GItem property.  The GItem property should be renamed to something
     # TODO: like "allow_initiate_drag" as it indicates that a click/drag can be
     # TODO: initiated from itself, not whether the larger GObject can be dragged.
-    def make_undraggable(self):
-        """ Make the GObject undraggable (immovable) across the canvas """
-        for i in self._items:
-            print(f"DEBUG: Setting GItem {i} dragability to False")
-            self._items[i].draggable = False
+    #def make_undraggable(self):
+    #    """ Make the GObject undraggable (immovable) across the canvas """
+    #    for i in self._items:
+    #        print(f"DEBUG: Setting GItem {i} dragability to False")
+    #        self._items[i].draggable = False
 
-    def make_draggable(self):
-        """ Make the GObject draggable across the canvas """
-        for i in self._items:
-            print(f"DEBUG: Setting GItem {i} dragability to True")
-            self._items[i].draggable = True
+    #def make_draggable(self):
+    #    """ Make the GObject draggable across the canvas """
+    #    for i in self._items:
+    #        print(f"DEBUG: Setting GItem {i} dragability to True")
+    #        self._items[i].draggable = True
 
     def set_outline_width(self, width):
         self.outline_width = width
@@ -706,860 +679,4 @@ class GObject:
     @connector.setter
     def connector(self, value):
         self._connector = bool(value)
-
-
-class GWire(GObject):
-    """ Draw Wire connecting two connectable GObjects """
-
-    def __init__(self, *args, **kwargs):
-        initial_coords = args[0]  # should be a 4-tuple
-        name_tag = kwargs['name']
-
-        # Initialize parent GObject class
-        super().__init__(0, 0, name_tag)
-
-        # We are a connector object (used for connecting two connectable GObjects)
-        self.connector = True
-
-        # Connector GObjects keep track of what they are connected to
-        self.connection = GConnection(name=name_tag, g_object=self)
-
-        # As the GWire will need to move with other objects are they are re-positioned
-        # we will need to remember and track the two end points, and also implement
-        # methods to move and redraw.
-        self._coords = initial_coords
-
-    def add(self):
-
-        coords = self.smooth_coords(self._coords)
-
-        # We draw a fat line first, and then draw a thicker white line on top to
-        # make it look like a wire.
-        self._items['fat_line'] = GWireItem(self.gcanvas, coords, self._tag)
-        self._items['fat_line'].add()
-        self._items['fat_line'].outline_color = 'blue'
-        self._items['fat_line'].outline_width = 5.0 * self.gcanvas.zoom_level
-        self._items['fat_line'].hidden = False
-        self._items['fat_line'].draggable = False
-        self._items['fat_line'].always_on_top = True
-
-        self._items['thin_line'] = GWireItem(self.gcanvas, coords, self._tag)
-        self._items['thin_line'].add()
-        self._items['thin_line'].outline_color = 'white'
-        self._items['thin_line'].outline_width = 2.0 * self.gcanvas.zoom_level
-        self._items['thin_line'].hidden = False
-        self._items['thin_line'].draggable = False
-        self._items['thin_line'].always_on_top = True
-
-    def coords(self, coords):
-        self._coords = coords
-
-    def redraw(self):
-        for g_item_name in self._items:
-            g_item = self._items[g_item_name]
-            g_item.coords = self.smooth_coords(self._coords)
-            g_item.raise_up()
-            g_item.redraw()
-
-    def move_to(self, coords):
-        self.coords(coords)
-        self.redraw()
-
-    def update(self):
-        """ check if we have any GNode connections, update our coords, and redraw """
-        coords = []
-        if self.connection.g_nodes:
-            #print(f"** DEBUG: {self}")
-            #print(f"** DEBUG: {self.connection}")
-            #print(f"** DEBUG: {self.connection.g_nodes}")
-            for g_node in self.connection.g_nodes:
-                #print(f"** DEBUG:      g_node.name: {g_node.name}")
-                #print(f"** DEBUG:      g_node.g_item: {g_node.g_item} {g_node.g_item.item}")
-                (x, y) = g_node.g_item.center_point()
-                coords.extend([x, y])
-            #print(f"DEBUG: update(): Calculated new coords for GWire {coords}")
-            self.move_to(coords)
-
-
-class GBufferGate(GObject):
-
-    def __init__(self, *args, **kwargs):
-
-        initial_x = args[0]
-        initial_y = args[1]
-        name_tag = kwargs['name']
-
-        # Initialize parent GObject class
-        super().__init__(initial_x, initial_y, name_tag)
-
-        self._points = []
-
-    def add(self):
-
-        self._items['output_line'] = GHorzLineItem(self.gcanvas, self._x + 58, self._y + 28, 10, self._tag)
-        self._items['output_line'].add()
-        self._items['output_line'].hidden = False
-        self._items['output_line'].draggable = False
-
-        self._items['output_dot'] = GOvalItem(self.gcanvas, self._x + 68, self._y + 23, 10, 10, self._tag)
-        self._items['output_dot'].add()
-        self._items['output_dot'].fill_color = 'white'
-        self._items['output_dot'].outline_color = 'blue'
-        self._items['output_dot'].active_outline_color = 'orange'
-        self._items['output_dot'].outline_width = 2.0
-        self._items['output_dot'].active_outline_width = 5.0
-        self._items['output_dot'].hidden = False
-        self._items['output_dot'].draggable = False
-        self._items['output_dot'].connectable_initiator = True
-        self._items['output_dot'].show_selection = False
-
-        self._nodes['output'] = GNode(name="GBufferGate Output", g_object=self, g_item=self._items['output_dot'])
-
-        self._items['input_line'] = GHorzLineItem(self.gcanvas, self._x, self._y + 28, -10, self._tag)
-        self._items['input_line'].add()
-        self._items['input_line'].hidden = False
-        self._items['input_line'].draggable = False
-
-        self._items['input_dot'] = GOvalItem(self.gcanvas, self._x - 20, self._y + 23, 10, 10, self._tag)
-        self._items['input_dot'].add()
-        self._items['input_dot'].fill_color = 'white'
-        self._items['input_dot'].outline_color = 'blue'
-        self._items['input_dot'].active_outline_color = 'orange'
-        self._items['input_dot'].outline_width = 2.0
-        self._items['input_dot'].active_outline_width = 5.0
-        self._items['input_dot'].hidden = False
-        self._items['input_dot'].draggable = False
-        self._items['input_dot'].show_selection = False
-        self._items['input_dot'].connectable_terminator = True
-
-        self._nodes['input'] = GNode(name="GBufferGate Input", g_object=self, g_item=self._items['input_dot'])
-
-        self._points.extend((self._x, self._y))  # first point in polygon
-        self._points.extend((self._x + 58, self._y + 28))
-        self._points.extend((self._x + 0, self._y + 56))
-
-        self._items['body'] = GPolygonItem(self.gcanvas, self._points, self._tag)
-        self._items['body'].add()
-        self._items['body'].fill_color = 'white'
-        self._items['body'].outline_color = 'blue'
-        self._items['body'].active_outline_color = 'orange'
-        self._items['body'].outline_width = 2.0
-        self._items['body'].active_outline_width = 5.0
-        self._items['body'].hidden = False
-        self._items['body'].draggable = True
-        self._items['body'].show_selection = True
-
-
-class GNotGate(GObject):
-
-    def __init__(self, *args, **kwargs):
-
-        initial_x = args[0]
-        initial_y = args[1]
-        name_tag = kwargs['name']
-
-        # Initialize parent GObject class
-        super().__init__(initial_x, initial_y, name_tag)
-
-        self._points = []
-
-    def add(self):
-        self._items['output_line'] = GHorzLineItem(self.gcanvas, self._x + 66, self._y + 28, 10, self._tag)
-        self._items['output_line'].add()
-        self._items['output_line'].hidden = False
-        self._items['output_line'].draggable = False
-
-        self._items['output_dot'] = GOvalItem(self.gcanvas, self._x + 76, self._y + 23, 10, 10, self._tag)
-        self._items['output_dot'].add()
-        self._items['output_dot'].fill_color = 'white'
-        self._items['output_dot'].outline_color = 'blue'
-        self._items['output_dot'].active_outline_color = 'orange'
-        self._items['output_dot'].outline_width = 2.0
-        self._items['output_dot'].active_outline_width = 5.0
-        self._items['output_dot'].hidden = False
-        self._items['output_dot'].draggable = False
-        self._items['output_dot'].connectable_initiator = True
-        self._items['output_dot'].show_selection = False
-
-        self._nodes['output'] = GNode(name="GNotGate Output", g_object=self, g_item=self._items['output_dot'])
-
-        self._items['input_line'] = GHorzLineItem(self.gcanvas, self._x, self._y + 28, -10, self._tag)
-        self._items['input_line'].add()
-        self._items['input_line'].hidden = False
-        self._items['input_line'].draggable = False
-
-        self._items['input_dot'] = GOvalItem(self.gcanvas, self._x - 20, self._y + 23, 10, 10, self._tag)
-        self._items['input_dot'].add()
-        self._items['input_dot'].fill_color = 'white'
-        self._items['input_dot'].outline_color = 'blue'
-        self._items['input_dot'].active_outline_color = 'orange'
-        self._items['input_dot'].outline_width = 2.0
-        self._items['input_dot'].active_outline_width = 5.0
-        self._items['input_dot'].hidden = False
-        self._items['input_dot'].draggable = False
-        self._items['input_dot'].show_selection = False
-        self._items['input_dot'].connectable_terminator = True
-
-        self._nodes['input'] = GNode(name="GNotGate Input", g_object=self, g_item=self._items['input_dot'])
-
-        self._items['not_dot'] = GOvalItem(self.gcanvas, self._x + 58, self._y + 24, 8, 8, self._tag)
-        self._items['not_dot'].add()
-        self._items['not_dot'].fill_color = 'white'
-        self._items['not_dot'].outline_color = 'blue'
-        self._items['not_dot'].active_outline_color = 'orange'
-        self._items['not_dot'].outline_width = 2.0
-        self._items['not_dot'].active_outline_width = 5.0
-        self._items['not_dot'].hidden = False
-        self._items['not_dot'].draggable = False
-        self._items['not_dot'].show_selection = True
-        self._items['not_dot'].highlight_group = 'body_plus_not_bubble'
-
-        self._points.extend((self._x, self._y))  # first point in polygon
-        self._points.extend((self._x + 58, self._y + 28))
-        self._points.extend((self._x + 0, self._y + 56))
-
-        self._items['body'] = GPolygonItem(self.gcanvas, self._points, self._tag)
-        self._items['body'].add()
-        self._items['body'].fill_color = 'white'
-        self._items['body'].outline_color = 'blue'
-        self._items['body'].active_outline_color = 'orange'
-        self._items['body'].outline_width = 2.0
-        self._items['body'].active_outline_width = 5.0
-        self._items['body'].hidden = False
-        self._items['body'].draggable = True
-        self._items['body'].show_selection = True
-        self._items['body'].highlight_group = 'body_plus_not_bubble'
-
-
-class GOrGate(GObject):
-    """ Draw OR Gate on the GCanvas """
-
-    def __init__(self, *args, **kwargs):
-        initial_x = args[0]
-        initial_y = args[1]
-        name_tag = kwargs['name']
-
-        # Initialize parent GObject class
-        super().__init__(initial_x, initial_y, name_tag)
-
-        self._points = []
-
-    def add(self):
-
-        x = self._x
-        y = self._y
-
-        self._points.extend((x, y))  # first point in polygon
-
-        # scale the unit circle by 30, as that's the distance from the center of the circle to the arc
-        # See Also: https://en.wikipedia.org/wiki/Unit_circle
-        for angle in range(-90, 90):
-            arc_x = (math.cos(math.radians(angle)) * 65) + x
-            arc_y = (math.sin(math.radians(angle)) * 30) + (y + 30)
-            self._points.extend((arc_x, arc_y))
-
-        for angle in range(90, 270):
-            arc_x = (math.cos(math.radians(angle)) * -8) + x
-            arc_y = (math.sin(math.radians(angle)) * 30) + (y + 30)
-            self._points.extend((arc_x, arc_y))
-
-        self._items['output_line'] = GHorzLineItem(self.gcanvas, self._x + 65, self._y + 30, 10, self._tag)
-        self._items['output_line'].add()
-        self._items['output_line'].hidden = False
-        self._items['output_line'].draggable = False
-
-        self._items['output_dot'] = GOvalItem(self.gcanvas, self._x + 75, self._y + 25, 10, 10, self._tag)
-        self._items['output_dot'].add()
-        self._items['output_dot'].fill_color = 'white'
-        self._items['output_dot'].outline_color = 'blue'
-        self._items['output_dot'].active_outline_color = 'orange'
-        self._items['output_dot'].outline_width = 2.0
-        self._items['output_dot'].active_outline_width = 5.0
-        self._items['output_dot'].hidden = False
-        self._items['output_dot'].draggable = False
-        self._items['output_dot'].connectable_initiator = True
-        self._items['output_dot'].show_selection = False
-
-        self._nodes['output'] = GNode(name="GOrGate Output", g_object=self, g_item=self._items['output_dot'])
-
-        self._items['input_line1'] = GHorzLineItem(self.gcanvas, self._x + 7, self._y + 17, -10, self._tag)
-        self._items['input_line1'].add()
-        self._items['input_line1'].hidden = False
-        self._items['input_line1'].draggable = False
-
-        self._items['input_dot1'] = GOvalItem(self.gcanvas, self._x - 13, self._y + 12, 10, 10, self._tag)
-        self._items['input_dot1'].add()
-        self._items['input_dot1'].fill_color = 'white'
-        self._items['input_dot1'].outline_color = 'blue'
-        self._items['input_dot1'].active_outline_color = 'orange'
-        self._items['input_dot1'].outline_width = 2.0
-        self._items['input_dot1'].active_outline_width = 5.0
-        self._items['input_dot1'].hidden = False
-        self._items['input_dot1'].draggable = False
-        self._items['input_dot1'].show_selection = False
-        self._items['input_dot1'].connectable_terminator = True
-
-        self._nodes['input_1'] = GNode(name="GOrGate Input 1", g_object=self, g_item=self._items['input_dot1'])
-
-        self._items['input_line2'] = GHorzLineItem(self.gcanvas, self._x + 7, self._y + 43, -10, self._tag)
-        self._items['input_line2'].add()
-        self._items['input_line2'].hidden = False
-        self._items['input_line2'].draggable = False
-
-        self._items['input_dot2'] = GOvalItem(self.gcanvas, self._x - 13, self._y + 38, 10, 10, self._tag)
-        self._items['input_dot2'].add()
-        self._items['input_dot2'].fill_color = 'white'
-        self._items['input_dot2'].outline_color = 'blue'
-        self._items['input_dot2'].active_outline_color = 'orange'
-        self._items['input_dot2'].outline_width = 2.0
-        self._items['input_dot2'].active_outline_width = 5.0
-        self._items['input_dot2'].hidden = False
-        self._items['input_dot2'].draggable = False
-        self._items['input_dot2'].show_selection = False
-        self._items['input_dot2'].connectable_terminator = True
-
-        self._nodes['input_2'] = GNode(name="GOrGate Input 2", g_object=self, g_item=self._items['input_dot2'])
-
-        self._items['body'] = GPolygonItem(self.gcanvas, self._points, self._tag)
-        self._items['body'].add()
-        self._items['body'].fill_color = 'white'
-        self._items['body'].outline_color = 'blue'
-        self._items['body'].active_outline_color = 'orange'
-        self._items['body'].outline_width = 2.0
-        self._items['body'].active_outline_width = 5.0
-        self._items['body'].hidden = False
-        self._items['body'].draggable = True
-        self._items['body'].show_selection = True
-
-
-class GXOrGate(GObject):
-    """ Draw XOR Gate on the GCanvas """
-
-    def __init__(self, *args, **kwargs):
-        initial_x = args[0]
-        initial_y = args[1]
-        name_tag = kwargs['name']
-
-        # Initialize parent GObject class
-        super().__init__(initial_x, initial_y, name_tag)
-
-        self._arc1_points = []
-        self._arc2_points = []
-
-    def add(self):
-
-        x = self._x
-        y = self._y
-
-        self._arc1_points.extend((x, y))  # first point in polygon
-
-        # scale the unit circle by 30, as that's the distance from the center of the circle to the arc
-        # See Also: https://en.wikipedia.org/wiki/Unit_circle
-        for angle in range(-90, 90):
-            arc_x = (math.cos(math.radians(angle)) * 65) + x
-            arc_y = (math.sin(math.radians(angle)) * 30) + (y + 30)
-            self._arc1_points.extend((arc_x, arc_y))
-
-        for angle in range(90, 270):
-            arc_x = (math.cos(math.radians(angle)) * -8) + x
-            arc_y = (math.sin(math.radians(angle)) * 30) + (y + 30)
-            self._arc1_points.extend((arc_x, arc_y))
-
-        # Arc2 is the extra line on the back of the XOR gate
-        self._arc2_points.extend((x - 8, y))  # first point in polygon
-
-        for angle in range(-90, 90):
-            arc_x = (math.cos(math.radians(angle)) * 8) + (x - 8)
-            arc_y = (math.sin(math.radians(angle)) * 30) + (y + 30)
-            self._arc2_points.extend((arc_x, arc_y))
-
-        for angle in range(90, 270):
-            arc_x = (math.cos(math.radians(angle)) * -8) + (x - 8)
-            arc_y = (math.sin(math.radians(angle)) * 30) + (y + 30)
-            self._arc2_points.extend((arc_x, arc_y))
-
-        self._items['output_line'] = GHorzLineItem(self.gcanvas, self._x + 65, self._y + 30, 10, self._tag)
-        self._items['output_line'].add()
-        self._items['output_line'].hidden = False
-        self._items['output_line'].draggable = False
-
-        self._items['output_dot'] = GOvalItem(self.gcanvas, self._x + 75, self._y + 25, 10, 10, self._tag)
-        self._items['output_dot'].add()
-        self._items['output_dot'].fill_color = 'white'
-        self._items['output_dot'].outline_color = 'blue'
-        self._items['output_dot'].active_outline_color = 'orange'
-        self._items['output_dot'].outline_width = 2.0
-        self._items['output_dot'].active_outline_width = 5.0
-        self._items['output_dot'].hidden = False
-        self._items['output_dot'].draggable = False
-        self._items['output_dot'].connectable_initiator = True
-        self._items['output_dot'].show_selection = False
-
-        self._nodes['output'] = GNode(name="GXOrGate Output", g_object=self, g_item=self._items['output_dot'])
-
-        self._items['input_line1'] = GHorzLineItem(self.gcanvas, self._x, self._y + 17, -10, self._tag)
-        self._items['input_line1'].add()
-        self._items['input_line1'].hidden = False
-        self._items['input_line1'].draggable = False
-
-        self._items['input_dot1'] = GOvalItem(self.gcanvas, self._x - 20, self._y + 12, 10, 10, self._tag)
-        self._items['input_dot1'].add()
-        self._items['input_dot1'].fill_color = 'white'
-        self._items['input_dot1'].outline_color = 'blue'
-        self._items['input_dot1'].active_outline_color = 'orange'
-        self._items['input_dot1'].outline_width = 2.0
-        self._items['input_dot1'].active_outline_width = 5.0
-        self._items['input_dot1'].hidden = False
-        self._items['input_dot1'].draggable = False
-        self._items['input_dot1'].show_selection = False
-        self._items['input_dot1'].connectable_terminator = True
-
-        self._nodes['input_1'] = GNode(name="GXOrGate Input 1", g_object=self, g_item=self._items['input_dot1'])
-
-        self._items['input_line2'] = GHorzLineItem(self.gcanvas, self._x, self._y + 43, -10, self._tag)
-        self._items['input_line2'].add()
-        self._items['input_line2'].hidden = False
-        self._items['input_line2'].draggable = False
-
-        self._items['input_dot2'] = GOvalItem(self.gcanvas, self._x - 20, self._y + 38, 10, 10, self._tag)
-        self._items['input_dot2'].add()
-        self._items['input_dot2'].fill_color = 'white'
-        self._items['input_dot2'].outline_color = 'blue'
-        self._items['input_dot2'].active_outline_color = 'orange'
-        self._items['input_dot2'].outline_width = 2.0
-        self._items['input_dot2'].active_outline_width = 5.0
-        self._items['input_dot2'].hidden = False
-        self._items['input_dot2'].draggable = False
-        self._items['input_dot2'].show_selection = False
-        self._items['input_dot2'].connectable_terminator = True
-
-        self._nodes['input_2'] = GNode(name="GXOrGate Input 2", g_object=self, g_item=self._items['input_dot2'])
-
-        self._items['body'] = GPolygonItem(self.gcanvas, self._arc1_points, self._tag)
-        self._items['body'].add()
-        self._items['body'].fill_color = 'white'
-        self._items['body'].outline_color = 'blue'
-        self._items['body'].active_outline_color = 'orange'
-        self._items['body'].outline_width = 2.0
-        self._items['body'].active_outline_width = 5.0
-        self._items['body'].hidden = False
-        self._items['body'].draggable = True
-        self._items['body'].show_selection = True
-        self._items['body'].highlight_group = 'body_plus_arc2'
-
-        self._items['arc2'] = GPolygonItem(self.gcanvas, self._arc2_points, self._tag)
-        self._items['arc2'].add()
-        self._items['arc2'].fill_color = 'white'
-        self._items['arc2'].outline_color = 'blue'
-        self._items['arc2'].active_outline_color = 'orange'
-        self._items['arc2'].outline_width = 2.0
-        self._items['arc2'].active_outline_width = 5.0
-        self._items['arc2'].hidden = False
-        self._items['arc2'].draggable = True
-        self._items['arc2'].show_selection = False
-        self._items['arc2'].highlight_group = 'body_plus_arc2'
-
-
-class GAndGate(GObject):
-    """ Draw AND Gate on the GCanvas """
-
-    def __init__(self, *args, **kwargs):
-        initial_x = args[0]
-        initial_y = args[1]
-        name_tag = kwargs['name']
-
-        # Initialize parent GObject class
-        super().__init__(initial_x, initial_y, name_tag)
-
-        self._points = []
-
-    def add(self):
-
-        x = self._x
-        y = self._y
-
-        self._points.extend((x, y))  # first point in polygon
-        self._points.extend((x + 29, y))
-
-        # scale the unit circle by 30, as that's the distance from the center of the circle to the arc
-        # See Also: https://en.wikipedia.org/wiki/Unit_circle
-        for angle in range(-90, 90):
-            arc_x = (math.cos(math.radians(angle)) * 30) + (x + 29)
-            arc_y = (math.sin(math.radians(angle)) * 30) + (y + 30)
-            self._points.extend((arc_x, arc_y))
-
-        self._points.extend((x, y + 60))  # last point in polygon, which connects back to the 1st point
-
-        self._items['output_line'] = GHorzLineItem(self.gcanvas, self._x + 59, self._y + 30, 10, self._tag)
-        self._items['output_line'].add()
-        self._items['output_line'].hidden = False
-        self._items['output_line'].draggable = False
-
-        self._items['output_dot'] = GOvalItem(self.gcanvas, self._x + 69, self._y + 25, 10, 10, self._tag)
-        self._items['output_dot'].add()
-        self._items['output_dot'].fill_color = 'white'
-        self._items['output_dot'].outline_color = 'blue'
-        self._items['output_dot'].active_outline_color = 'orange'
-        self._items['output_dot'].outline_width = 2.0
-        self._items['output_dot'].active_outline_width = 5.0
-        self._items['output_dot'].hidden = False
-        self._items['output_dot'].draggable = False
-        self._items['output_dot'].connectable_initiator = True
-        self._items['output_dot'].show_selection = False
-
-        self._nodes['output'] = GNode(name="GAndGate Output", g_object=self, g_item=self._items['output_dot'])
-
-        self._items['input_line1'] = GHorzLineItem(self.gcanvas, self._x, self._y + 17, -10, self._tag)
-        self._items['input_line1'].add()
-        self._items['input_line1'].hidden = False
-        self._items['input_line1'].draggable = False
-
-        self._items['input_dot1'] = GOvalItem(self.gcanvas, self._x - 20, self._y + 12, 10, 10, self._tag)
-        self._items['input_dot1'].add()
-        self._items['input_dot1'].fill_color = 'white'
-        self._items['input_dot1'].outline_color = 'blue'
-        self._items['input_dot1'].active_outline_color = 'orange'
-        self._items['input_dot1'].outline_width = 2.0
-        self._items['input_dot1'].active_outline_width = 5.0
-        self._items['input_dot1'].hidden = False
-        self._items['input_dot1'].draggable = False
-        self._items['input_dot1'].show_selection = False
-        self._items['input_dot1'].connectable_terminator = True
-
-        self._nodes['input_1'] = GNode(name="GAndGate Input 1", g_object=self, g_item=self._items['input_dot1'])
-
-        self._items['input_line2'] = GHorzLineItem(self.gcanvas, self._x, self._y + 43, -10, self._tag)
-        self._items['input_line2'].add()
-        self._items['input_line2'].hidden = False
-        self._items['input_line2'].draggable = False
-
-        self._items['input_dot2'] = GOvalItem(self.gcanvas, self._x - 20, self._y + 38, 10, 10, self._tag)
-        self._items['input_dot2'].add()
-        self._items['input_dot2'].fill_color = 'white'
-        self._items['input_dot2'].outline_color = 'blue'
-        self._items['input_dot2'].active_outline_color = 'orange'
-        self._items['input_dot2'].outline_width = 2.0
-        self._items['input_dot2'].active_outline_width = 5.0
-        self._items['input_dot2'].hidden = False
-        self._items['input_dot2'].draggable = False
-        self._items['input_dot2'].show_selection = False
-        self._items['input_dot2'].connectable_terminator = True
-
-        self._nodes['input_2'] = GNode(name="GAndGate Input 2", g_object=self, g_item=self._items['input_dot2'])
-
-        self._items['body'] = GPolygonItem(self.gcanvas, self._points, self._tag)
-        self._items['body'].add()
-        self._items['body'].fill_color = 'white'
-        self._items['body'].outline_color = 'blue'
-        self._items['body'].active_outline_color = 'orange'
-        self._items['body'].outline_width = 2.0
-        self._items['body'].active_outline_width = 5.0
-        self._items['body'].hidden = False
-        self._items['body'].draggable = True
-        self._items['body'].show_selection = True
-
-
-class GRect(GObject):
-    """ Draw Square or Rectangle on a GCanvas """
-
-    def __init__(self, *args, **kwargs):
-
-        initial_x = args[0]
-        initial_y = args[1]
-        width = args[2]
-        height = args[3]
-        name_tag = kwargs['name']
-
-        # Initialize parent GObject class
-        super().__init__(initial_x, initial_y, name_tag)
-
-        # attributes unique to a GRect
-        self._width = width
-        self._height = height
-
-    def add(self):
-
-        # Adjust width and height for current zoom level
-        self._width *= self.gcanvas.zoom_level
-        self._height *= self.gcanvas.zoom_level
-
-        self._items['GRect'] = GRectItem(self.gcanvas, self._x, self._y, self._width, self._height, self._tag)
-        self._items['GRect'].add()
-        self._items['GRect'].fill_color = 'white'
-        self._items['GRect'].outline_color = 'blue'
-        self._items['GRect'].active_outline_color = 'orange'
-        self._items['GRect'].outline_width = 2.0 * self.gcanvas.zoom_level
-        self._items['GRect'].active_outline_width = 5.0 * self.gcanvas.zoom_level
-        self._items['GRect'].hidden = False
-        self._items['GRect'].draggable = True
-        self._items['GRect'].show_selection = True
-
-
-class GOval(GObject):
-    """ Draw Oval or Circle on a GCanvas """
-
-    def __init__(self, *args, **kwargs):
-
-        initial_x = args[0]
-        initial_y = args[1]
-        width = args[2]
-        height = args[3]
-        name_tag = kwargs['name']
-
-        # Initialize parent GObject class
-        super().__init__(initial_x, initial_y, name_tag)
-
-        # attributes unique to a GOval
-        self._width = width
-        self._height = height
-
-    def add(self):
-
-        # Adjust width and height for current zoom level
-        self._width *= self.gcanvas.zoom_level
-        self._height *= self.gcanvas.zoom_level
-
-        self._items['GOval'] = GOvalItem(self.gcanvas, self._x, self._y, self._width, self._height, self._tag)
-        self._items['GOval'].add()
-        self._items['GOval'].fill_color = 'white'
-        self._items['GOval'].outline_color = 'blue'
-        self._items['GOval'].active_outline_color = 'orange'
-        self._items['GOval'].outline_width = 2.0 * self.gcanvas.zoom_level
-        self._items['GOval'].active_outline_width = 5.0 * self.gcanvas.zoom_level
-        self._items['GOval'].hidden = False
-        self._items['GOval'].draggable = True
-        self._items['GOval'].show_selection = True
-
-
-class GGraphPaper(GObject):
-    """ Draw Graph Paper """
-
-    def __init__(self, *args, **kwargs):
-
-        initial_x = args[0]
-        initial_y = args[1]
-        width = args[2]
-        height = args[3]
-        name_tag = kwargs['name']
-
-        # Initialize parent GObject class
-        super().__init__(initial_x, initial_y, name_tag)
-
-        self._width = width
-        self._height = height
-        self._bg_color = "#eeffee"
-
-    def add(self):
-        # Draw the Graph Paper background rectangle using a greenish-white tint
-        self._items['background_rect'] = GRectItem(
-            self.gcanvas, self._x, self._y, self._x + self._width, self._y + self._height, self._tag)
-        self._items['background_rect'].add()
-        self._items['background_rect'].fill_color = self._bg_color
-        self._items['background_rect'].outline_color = self._bg_color
-        self._items['background_rect'].hidden = False
-        self._items['background_rect'].raisable = False
-        self._items['background_rect'].draggable = False
-        self._items['background_rect'].selectable = False
-
-        # Draw the Graph Paper lines.  We draw all of the vertical lines, followed by all of the
-        # horizontal lines.  Every 100 pixels (or every 10th line) we draw using a DARKER green, to
-        # simulate the classic "Engineer's Graph Paper".
-
-        # Creates all vertical lines
-        for i in range(self._x, self._x + self._width, 10):
-            if (i % 100) == 0:
-                line_color = "#aaffaa"
-            else:
-                line_color = "#ccffcc"
-            points = [(i, self._x), (i, self._x + self._height)]
-            self._items['graph_paper_vline'+str(i)] = GLineItem(self.gcanvas, points, self._tag)
-            self._items['graph_paper_vline'+str(i)].add()
-            self._items['graph_paper_vline'+str(i)].fill_color = line_color
-            self._items['graph_paper_vline'+str(i)].outline_width = 1.0
-            self._items['graph_paper_vline'+str(i)].active_outline_width = 1.0
-            self._items['graph_paper_vline'+str(i)].hidden = False
-            self._items['graph_paper_vline'+str(i)].raisable = False
-            self._items['graph_paper_vline'+str(i)].draggable = False
-            self._items['graph_paper_vline'+str(i)].selectable = False
-
-        # Creates all horizontal lines
-        for i in range(self._y, self._y + self._height, 10):
-            if (i % 100) == 0:
-                line_color = "#aaffaa"
-            else:
-                line_color = "#ccffcc"
-            points = [(self._y, i), (self._y + self._width, i)]
-            self._items['graph_paper_hline'+str(i)] = GLineItem(self.gcanvas, points, self._tag)
-            self._items['graph_paper_hline'+str(i)].add()
-            self._items['graph_paper_hline'+str(i)].fill_color = line_color
-            self._items['graph_paper_hline'+str(i)].outline_width = 1.0
-            self._items['graph_paper_hline'+str(i)].active_outline_width = 1.0
-            self._items['graph_paper_hline'+str(i)].hidden = False
-            self._items['graph_paper_hline'+str(i)].raisable = False
-            self._items['graph_paper_hline'+str(i)].draggable = False
-            self._items['graph_paper_hline'+str(i)].selectable = False
-
-
-class GPythonLogo(GObject):
-    """ Draw Python Logo on the GCanvas """
-
-    def __init__(self, *args, **kwargs):
-        initial_x = args[0]
-        initial_y = args[1]
-        name_tag = kwargs['name']
-
-        # Initialize parent GObject class
-        super().__init__(initial_x, initial_y, name_tag)
-
-        self._points = []
-        self._rotated_points = []
-        self._zoomed_points = []
-        self._zoomed_rotated_points = []
-
-    def add(self):
-
-        x = self._x
-        y = self._y
-
-        self._points.extend((x, y + 68))  # first point in polygon
-
-        # starting at top left snake mouth
-        for angle in range(-180, -90):
-            arc_x = (math.cos(math.radians(angle)) * 30) + (x + 29)
-            arc_y = (math.sin(math.radians(angle)) * 30) + (y + 30)
-            self._points.extend((arc_x, arc_y))
-
-        for angle in range(-90, 0):
-            arc_x = (math.cos(math.radians(angle)) * 30) + (x + 126)
-            arc_y = (math.sin(math.radians(angle)) * 30) + (y + 30)
-            self._points.extend((arc_x, arc_y))
-
-        for angle in range(0, 90):
-            arc_x = (math.cos(math.radians(angle)) * 30) + (x + 126)
-            arc_y = (math.sin(math.radians(angle)) * 30) + (y + 122)
-            self._points.extend((arc_x, arc_y))
-
-        for angle in range(-90, 0):
-            arc_x = (math.cos(math.radians(angle)) * -42) + (x + 30)
-            arc_y = (math.sin(math.radians(angle)) * 42) + (y + 194)
-            self._points.extend((arc_x, arc_y))
-
-        self._points.extend((x - 12, y + 238))
-
-        for angle in range(90, 180):
-            arc_x = (math.cos(math.radians(angle)) * 30) + (x - 50)
-            arc_y = (math.sin(math.radians(angle)) * 30) + (y + 208)
-            self._points.extend((arc_x, arc_y))
-
-        for angle in range(-180, -90):
-            arc_x = (math.cos(math.radians(angle)) * 30) + (x - 50)
-            arc_y = (math.sin(math.radians(angle)) * 30) + (y + 110)
-            self._points.extend((arc_x, arc_y))
-
-        self._points.extend((x + 78, y + 80))
-        self._points.extend((x + 78, y + 68))
-        self._points.extend((x + 32, y + 68))
-        self._points.extend((x + 32, y + 50))
-
-        for angle in range(-270, 90):
-            arc_x = (math.cos(math.radians(angle)) * 15) + (x + 32)
-            arc_y = (math.sin(math.radians(angle)) * 15) + (y + 32)
-            self._points.extend((arc_x, arc_y))
-
-        self._points.extend((x + 32, y + 68))
-
-        # the mathematical formulas to scale a point (x,y) by a factor of S relative to the point (cx, cy) are:
-        # x_new = (S * (x - cx)) + cx
-        # y_new = (S * (y - cy)) + cy
-
-        cx = x + 78
-        cy = y + 158
-
-        self._zoomed_points = []
-        for xx, yy in grouper(self._points, 2):
-            x_new = (self.gcanvas.zoom_level * (xx - cx)) + cx
-            y_new = (self.gcanvas.zoom_level * (yy - cy)) + cy
-            self._zoomed_points.extend((x_new, y_new))
-
-        self._items['blue_snake'] = GPolygonItem(self.gcanvas, self._zoomed_points, self._tag)
-        self._items['blue_snake'].add()
-        self._items['blue_snake'].fill_color = '#4B8BBE'
-        self._items['blue_snake'].outline_color = '#4B8BBE'
-        self._items['blue_snake'].active_outline_color = '#4B8BBE'
-        self._items['blue_snake'].outline_width = 1.0
-        self._items['blue_snake'].active_outline_width = 1.0
-        self._items['blue_snake'].hidden = False
-        self._items['blue_snake'].draggable = True
-        self._items['blue_snake'].show_selection = False
-        self._items['blue_snake'].show_highlight = False
-
-        # I want to make a second snake rotated 180 degrees
-        # See: http://effbot.org/zone/tkinter-complex-canvas.htm
-        angle = 3.14159  # 3.14159 radians = 180 degrees
-        cangle = cmath.exp(angle * 1j)
-
-        # we will rotate about x,y
-        center = complex(cx, cy)
-        self._rotated_points = []
-        for xx, yy in grouper(self._points, 2):
-            v = cangle * (complex(xx, yy) - center) + center
-            self._rotated_points.extend((v.real, v.imag))
-
-        self._zoomed_rotated_points = []
-        for xx, yy in grouper(self._rotated_points, 2):
-            x_new = (self.gcanvas.zoom_level * (xx - cx)) + cx
-            y_new = (self.gcanvas.zoom_level * (yy - cy)) + cy
-            self._zoomed_rotated_points.extend((x_new, y_new))
-
-        self._items['orange_snake'] = GPolygonItem(self.gcanvas, self._zoomed_rotated_points, self._tag)
-        self._items['orange_snake'].add()
-        self._items['orange_snake'].fill_color = '#FFD43B'
-        self._items['orange_snake'].outline_color = '#FFD43B'
-        self._items['orange_snake'].active_outline_color = '#FFD43B'
-        self._items['orange_snake'].outline_width = 1.0
-        self._items['orange_snake'].active_outline_width = 1.0
-        self._items['orange_snake'].hidden = False
-        self._items['orange_snake'].draggable = True
-        self._items['orange_snake'].show_selection = False
-        self._items['orange_snake'].show_highlight = False
-
-
-class GNode:
-
-    # Class variable to keep track of next available ID
-    last_id = 100000000
-
-    def __init__(self, name, g_object, g_item):
-        self.id = self.next_id()
-        self.name = name
-        self.g_object = g_object
-        self.g_item = g_item
-        self.connections = []
-        self.max_connections = 1
-
-    def next_id(self):
-        GNode.last_id += 1
-        return GNode.last_id
-
-
-class GConnection:
-
-    # Class variable to keep track of next available ID
-    last_id = 1000000000
-
-    def __init__(self, name, g_object):
-        self.id = self.next_id()
-        self.name = name
-        self.g_object = g_object
-        self.g_nodes = []
-        self.max_nodes = 2
-        print(f"DEBUG: Create GConnection object with ID {self.id}")
-        print(f"DEBUG:        --> name: {self.name}")
-        print(f"DEBUG:        --> g_object: {self.g_object}")
-        print(f"DEBUG:        --> g_nodes: {self.g_nodes}")
-        print(f"DEBUG:        --> max_nodes: {self.max_nodes}")
-
-    def next_id(self):
-        GConnection.last_id += 1
-        return GConnection.last_id
 

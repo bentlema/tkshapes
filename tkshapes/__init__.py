@@ -1,19 +1,18 @@
 
 from .gcanvas import GCanvas
 
-from .gobject import (
-    GObject,
-    GGraphPaper,
-    GOval,
-    GRect,
-    GBufferGate,
-    GNotGate,
-    GAndGate,
-    GOrGate,
-    GXOrGate,
-    GPythonLogo,
-    GWire,
-)
+from .gobject import GObject
+
+from .gobjects.gwire import GWire
+from .gobjects.goval import GOval
+from .gobjects.grect import GRect
+from .gobjects.gbuffergate import GBufferGate
+from .gobjects.gnotgate import GNotGate
+from .gobjects.gandgate import GAndGate
+from .gobjects.gorgate import GOrGate
+from .gobjects.gxorgate import GXOrGate
+from .gobjects.ggraphpaper import GGraphPaper
+from .gobjects.gpythonlogo import GPythonLogo
 
 from .gitem import (
     GHorzLineItem,

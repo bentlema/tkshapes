@@ -153,19 +153,12 @@ class GCanvas(tk.Frame):
 
         # The name is passed in via a keyword arg
         name = kwargs['name']
-        print(f"GCanvas.create:  {name} = {gobject}")
+        print(f"DEBUG: GCanvas.create():  {name} = {gobject}")
 
         # GCanvas will remember what GObjects it holds in gobjects Dictionary
         self.gobjects[name] = gobject
 
         return gobject
-
-    # Not used anymore
-    #def add(self, name_tag, gobject):
-    #    self.gobjects[name_tag] = gobject
-    #    print(f"GCanvas knows about {len(self.gobjects)} GObjects")
-    #    for i, gobject in enumerate(self.gobjects):
-    #        print(f"     {i} GCanvas knows about {gobject}")
 
     # Setup Click-and-Drag to pan the canvas.  Tkinter canvas provides scan_mark() and scan_dragto()
     # to assist in click-and-drag events.  We use these to pan/scroll the canvas.
