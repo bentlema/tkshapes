@@ -1,6 +1,6 @@
 
 build:
-	pip install 'twine>=1.5.0'
+	pip install --upgrade pip setuptools twine wheel
 	python setup.py sdist bdist_wheel
 
 publish: build
