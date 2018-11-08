@@ -9,12 +9,7 @@ class GXNorGate(GObject):
     """ Draw XOR Gate on the GCanvas """
 
     def __init__(self, *args, **kwargs):
-        initial_x = args[0]
-        initial_y = args[1]
-        name_tag = kwargs['name']
-
-        # Initialize parent GObject class
-        super().__init__(initial_x, initial_y, name_tag)
+        super().__init__(*args, **kwargs)
 
         self._arc1_points = []
         self._arc2_points = []

@@ -1,8 +1,7 @@
 
 class GNode:
 
-    # Class variable to keep track of next available ID
-    previous_id = 1_000_000_000
+    gnode_id = 1_000_000_000
 
     def __init__(self, name, g_object, g_item):
         self.id = self.next_id()
@@ -13,6 +12,6 @@ class GNode:
         self.max_connections = 1
 
     def next_id(self):
-        GNode.previous_id += 1
-        return GNode.previous_id
+        GNode.gnode_id += 1
+        return GNode.gnode_id
 

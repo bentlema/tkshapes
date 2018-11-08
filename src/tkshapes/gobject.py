@@ -5,7 +5,19 @@ class GObject:
     A container for GItems. Can be added to a GCanvas.
     """
 
-    def __init__(self, initial_x, initial_y, name_tag=None):
+    gobject_id = 1_000_000_000
+
+    # TODO: re-do how args are passed in.  Instead of using positional args for initial_x/y
+    # TODO: lets use kwargs, and support the ability to pass in different key words for different
+    # TODO: GObject types.  Some take coords (4-tuple of a pair of coordinates), while others
+    # TODO: take a single initial coordinate followed by two dimensions, such as length and height.
+    # TODO: So lets support these:  point, coords, length, height, diameter, radius, etc., and
+    # TODO: get rid of the hard-codded initial_x and initial_y in the __init__ below...
+    def __init__(self, initial_x, initial_y, name=None, label=None):
+
+        self.id = self.next_id()
+
+        self.label = str(label)
 
         # Remember where I'm drawn on the canvas
         self._x = initial_x
@@ -14,9 +26,14 @@ class GObject:
         # Remember my GCanvas
         self.gcanvas = None
 
+        # TODO:  self._tag should not be private, and I also want to rename it to be self.name
         # my primary name tag
-        # TODO: if no name_tag is given, we need to generate a random unique tag name
-        self._tag = name_tag
+        if name == 'BACKGROUND':
+            self._tag = name
+        elif name:
+            self._tag = name + ":" + str(self.id)
+        else:
+            self._tag = "GObject:" + str(self.id)
 
         # Remember my GItems - Key is the GItem name, and Value is the actual GItem object
         self._items = {}
@@ -76,6 +93,11 @@ class GObject:
     @staticmethod
     def factory(a_class, *args, **kwargs):
         return a_class(*args, **kwargs)
+
+    @staticmethod
+    def next_id():
+        GObject.gobject_id += 1
+        return GObject.gobject_id
 
     def screen_to_canvas_coords(self, screen_x, screen_y):
         canvas_x = self.gcanvas.canvas.canvasx(screen_x)
@@ -224,12 +246,7 @@ class GObject:
                 int(y),
             )
 
-            # TODO: add a method to get GObject name, rather than use protected member "_tag" directly
-            new_wire_name = from_g_object._tag + "_" + from_node_name + "__to__" + to_g_object._tag + "_" + to_node_name
-            #print(f"DEBUG: FINALIZE CONNECTION")
-            #print(f"       -->     Coords: {coords}")
-            #print(f"       -->       Name: {new_wire_name}")
-            new_wire = self.gcanvas.create('GWire', coords, name=new_wire_name)
+            new_wire = self.gcanvas.create('GWire', coords, name="GWire")
 
             new_wire.connect(
                 from_g_object.node(from_node_name),

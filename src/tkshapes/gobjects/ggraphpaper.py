@@ -12,10 +12,10 @@ class GGraphPaper(GObject):
         initial_y = args[1]
         width = args[2]
         height = args[3]
-        name_tag = kwargs['name']
+        #name_tag = kwargs['name']
 
         # Initialize parent GObject class
-        super().__init__(initial_x, initial_y, name_tag)
+        super().__init__(initial_x, initial_y, **kwargs)
 
         self._width = width
         self._height = height

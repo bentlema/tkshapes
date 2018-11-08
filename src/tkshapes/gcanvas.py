@@ -4,6 +4,21 @@ import tkinter.ttk as ttk
 
 from .gobject import GObject
 
+from .gobjects.gwire import GWire
+from .gobjects.goval import GOval
+from .gobjects.grect import GRect
+from .gobjects.gbuffergate import GBufferGate
+from .gobjects.gnotgate import GNotGate
+from .gobjects.gandgate import GAndGate
+from .gobjects.gorgate import GOrGate
+from .gobjects.gxorgate import GXOrGate
+from .gobjects.gnandgate import GNandGate
+from .gobjects.gnorgate import GNorGate
+from .gobjects.gxnorgate import GXNorGate
+from .gobjects.ggraphpaper import GGraphPaper
+from .gobjects.gpythonlogo import GPythonLogo
+
+
 class GCanvas(tk.Frame):
 
     def __init__(self, parent, canvas_width=10000, canvas_height=10000):
@@ -22,17 +37,21 @@ class GCanvas(tk.Frame):
 
         # Registered GObject Types/Kinds
         # The key will be the type name (e.g. 'Rectangle') with the value being a reference to the corresponding object
-        # TODO: determine how and where built-in GObjects are registered, and how a user of this module could add
-        # TODO: their own new GObject types.
+        # These types are registered with the GCanvas using the register_gobject() method.
         self.gobject_types = {}
 
         # Where to send status messages
         self.status_var = None
 
         # Zoom Level
+        #
+        # TODO: Question:  should this be a float (as it is now), or should we use an integer?  A float has limited
+        # TODO: precision, and we may lose detail after repeated zoom in / zoom out.  If we store the zoom level
+        # TODO: as an integer we wouldn't lose detail, as the int in python is not limited, but we'd have to do
+        # TODO: a conversion every time we use the zoom level immediately before use.
         self.zoom_level = 1.0
 
-        # Remember our canvas dimensions (will change when we zoom in/out)
+        # Remember our current canvas dimensions (as they will change when we zoom in/out)
         self.canvas_width = canvas_width
         self.canvas_height = canvas_height
 
@@ -46,7 +65,7 @@ class GCanvas(tk.Frame):
         # tag of the background objects to the click/drag events.  See below scroll_start() and scroll_move()
 
         self.tag = "BACKGROUND"
-        self.bg_color = "#8888ff"
+        self.bg_color = "#99bbff"
         self.canvas.create_rectangle(0, 0, self.canvas_width, self.canvas_height,
                                      fill=self.bg_color, outline=self.bg_color, tag=self.tag)
 
@@ -106,7 +125,6 @@ class GCanvas(tk.Frame):
 
     def register_gobject(self, name, a_class):
         self.gobject_types[name] = a_class
-        #print(f"Registered {name} which is a {a_class}")
 
     def known_types(self):
         print("Known GObject types:")
@@ -118,13 +136,12 @@ class GCanvas(tk.Frame):
         print("Known GObjects:")
         print(f"     Count = {len(self.gobjects)}")
         for g in self.gobjects.keys():
-            print(f"     GObject = {g}")
+            print(f"     id={self.gobjects[g].id} name={g} label={self.gobjects[g].label}")
 
     def get_gobject_by_id(self, id):
         for g_object in self.gobjects.values():
             if g_object._tag == 'BACKGROUND':
                 continue
-            #print(f"DEBUG: Checking GObject {g_object}")
             found = g_object.get_item_by_id(id)
             if found:
                 return g_object
@@ -134,13 +151,13 @@ class GCanvas(tk.Frame):
         for g_object in self.gobjects.values():
             if g_object._tag == 'BACKGROUND':
                 continue
-            #print(f"DEBUG: Checking GObject {g_object}")
             found = g_object.get_item_by_id(id)
             if found:
                 return found
         return None
 
     def create(self, a_type, *args, **kwargs):
+        """ Create a new GObject and add it to the GCanvas """
 
         # Get the requested GObject type from the factory
         gobject = GObject.factory(self.gobject_types[a_type], *args, **kwargs)
@@ -151,12 +168,8 @@ class GCanvas(tk.Frame):
         # Now that the GObject we just created knows what GCanvas to draw on, let's add it to the canvas
         gobject.add()
 
-        # The name is passed in via a keyword arg
-        name = kwargs['name']
-        #print(f"DEBUG: GCanvas.create():  {name} = {gobject}")
-
         # GCanvas will remember what GObjects it holds in gobjects Dictionary
-        self.gobjects[name] = gobject
+        self.gobjects[gobject._tag] = gobject
 
         return gobject
 
@@ -266,4 +279,21 @@ class GCanvas(tk.Frame):
 
     def register_status_var(self, var):
         self.status_var = var
+
+    def register_builtins(self):
+        """ Register the built-in GObject types that come pre-defined with the tkshapes library """
+        self.register_gobject('GGraphPaper', GGraphPaper)
+        self.register_gobject('GRect', GRect)
+        self.register_gobject('GOval', GOval)
+        self.register_gobject('GBufferGate', GBufferGate)
+        self.register_gobject('GNotGate', GNotGate)
+        self.register_gobject('GAndGate', GAndGate)
+        self.register_gobject('GNandGate', GNandGate)
+        self.register_gobject('GOrGate', GOrGate)
+        self.register_gobject('GNorGate', GNorGate)
+        self.register_gobject('GXOrGate', GXOrGate)
+        self.register_gobject('GXNorGate', GXNorGate)
+        self.register_gobject('GPythonLogo', GPythonLogo)
+        self.register_gobject('GWire', GWire)
+
 

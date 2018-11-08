@@ -9,16 +9,15 @@ class GWire(GObject):
 
     def __init__(self, *args, **kwargs):
         initial_coords = args[0]  # should be a 4-tuple
-        name_tag = kwargs['name']
 
         # Initialize parent GObject class
-        super().__init__(0, 0, name_tag)
+        super().__init__(0, 0, **kwargs)
 
         # We are a connector object (used for connecting two connectable GObjects)
         self.connector = True
 
         # Connector GObjects keep track of what they are connected to
-        self.connection = GConnection(name=name_tag, g_object=self)
+        self.connection = GConnection(name=self._tag, g_object=self)
 
         # As the GWire will need to move with other objects are they are re-positioned
         # we will need to remember and track the two end points, and also implement
