@@ -13,7 +13,7 @@ class GObject:
     # TODO: take a single initial coordinate followed by two dimensions, such as length and height.
     # TODO: So lets support these:  point, coords, length, height, diameter, radius, etc., and
     # TODO: get rid of the hard-codded initial_x and initial_y in the __init__ below...
-    def __init__(self, initial_x, initial_y, name=None, label=None):
+    def __init__(self, initial_x, initial_y, coords=None, name=None, label=None):
 
         self.id = self.next_id()
 

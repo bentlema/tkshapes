@@ -7,6 +7,7 @@ from .gobject import GObject
 from .gobjects.gwire import GWire
 from .gobjects.goval import GOval
 from .gobjects.grect import GRect
+from .gobjects.gpolygon import GPolygon
 from .gobjects.gbuffergate import GBufferGate
 from .gobjects.gnotgate import GNotGate
 from .gobjects.gandgate import GAndGate
@@ -285,6 +286,7 @@ class GCanvas(tk.Frame):
         self.register_gobject('GGraphPaper', GGraphPaper)
         self.register_gobject('GRect', GRect)
         self.register_gobject('GOval', GOval)
+        self.register_gobject('GPolygon', GPolygon)
         self.register_gobject('GBufferGate', GBufferGate)
         self.register_gobject('GNotGate', GNotGate)
         self.register_gobject('GAndGate', GAndGate)
