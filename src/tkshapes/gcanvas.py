@@ -18,6 +18,7 @@ from .gobjects.gnorgate import GNorGate
 from .gobjects.gxnorgate import GXNorGate
 from .gobjects.ggraphpaper import GGraphPaper
 from .gobjects.gpythonlogo import GPythonLogo
+from .gobjects.gswitch import GToggleSwitch
 
 
 class GCanvas(tk.Frame):
@@ -297,5 +298,6 @@ class GCanvas(tk.Frame):
         self.register_gobject('GXNorGate', GXNorGate)
         self.register_gobject('GPythonLogo', GPythonLogo)
         self.register_gobject('GWire', GWire)
+        self.register_gobject('GToggleSwitch', GToggleSwitch)
 
 

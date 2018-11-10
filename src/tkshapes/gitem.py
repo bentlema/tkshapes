@@ -59,6 +59,14 @@ class GItem:
         self._connectable_initiator = False   # if the GItem can be the initiator of a connector
         self._connectable_terminator = False  # if the GItem can be the termination point of a connector
 
+    def add(self):
+        """ overridden by each individual GItem """
+        pass
+
+    def delete(self):
+        """ delete the canvas item from existence """
+        self._gcanvas.canvas.delete(self._canvas_item)
+
     def hide(self):
         # Setting my own property
         self.hidden = True
@@ -130,13 +138,11 @@ class GItem:
     @hidden.setter
     def hidden(self, value):
 
-        # if not hidden and we are setting to hidden
-        if not self._hidden and value:
+        if bool(value):
+            print(f"DEBUG: Setting hidden = True")
             self._gcanvas.canvas.itemconfigure(self._canvas_item, state="hidden")
             self._item_state = 'hidden'
-
-        # if hidden and we are setting to not hidden
-        if self._hidden and not value:
+        else:
             self._gcanvas.canvas.itemconfigure(self._canvas_item, state="normal")
             self._item_state = 'normal'
 
@@ -274,6 +280,10 @@ class GItem:
     @clickable.setter
     def clickable(self, value):
         self._clickable = bool(value)
+        if value:
+            self._gcanvas.canvas.addtag_withtag(self._tag + ":clickable", self._canvas_item)
+        else:
+            self._gcanvas.canvas.dtag(self._canvas_item, self._tag + ":clickable")
 
     @property
     def connectable_initiator(self):
@@ -519,18 +529,18 @@ class GOvalItem(GItem):
 class GPolygonItem(GItem):
     """ Draw Polygon on a GCanvas """
 
-    def __init__(self, gcanvas, points, name_tag=None):
+    def __init__(self, gcanvas, coords, name_tag=None):
 
-        initial_x = points[0]
-        initial_y = points[1]
+        initial_x = coords[0]
+        initial_y = coords[1]
 
         super().__init__(gcanvas, initial_x, initial_y, name_tag)
 
-        self._points = points
+        self._coords = coords
 
     def add(self):
         self._canvas_item = self._gcanvas.canvas.create_polygon(
-            self._points,
+            self._coords,
             outline=self._outline_color,
             activeoutline=self._outline_color,
             fill=self.fill_color,            # property

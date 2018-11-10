@@ -147,6 +147,9 @@ class GObject:
         # add bindings for selection toggle on/off using Command-Click
         self.gcanvas.canvas.tag_bind(self._tag + ":draggable", "<Command-ButtonPress-1>", self.on_command_button_press)
 
+        # add bindings for clickable GItems (those we can click but not drag)
+        self.gcanvas.canvas.tag_bind(self._tag + ":clickable", "<ButtonPress-1>", self.on_button_click)
+
         # add bindings for click and hold to drag an object
         self.gcanvas.canvas.tag_bind(self._tag + ":draggable", "<ButtonPress-1>", self.on_button_press)
         self.gcanvas.canvas.tag_bind(self._tag + ":draggable", "<ButtonRelease-1>", self.on_button_release)
@@ -169,6 +172,15 @@ class GObject:
 
         # add binding to handle Selection virtual events from a selection box
         self.gcanvas.canvas.bind("<<Selection>>", self.on_selection_event, "+")
+
+    def on_button_click(self, event):
+        #print(f"DEBUG: CLICKABLE ITEM -- CLICK   Button-{event.num} Item: {event.widget.find_withtag('current')}")
+        canvas_item = event.widget.find_withtag('current')
+        g_item = self.get_item_by_id(canvas_item)
+        if g_item.clickable:
+            #print(f"DEBUG: GItem {g_item} is clickable")
+            # lookup my parent GObject and toggle
+            self.gcanvas.get_gobject_by_id((g_item.item,)).toggle()
 
     def on_start_connection(self, event):
         """ Initiate connection """
