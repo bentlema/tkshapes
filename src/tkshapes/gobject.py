@@ -90,6 +90,9 @@ class GObject:
         self._connectable = False     # if the GObject can be connected to another connectable GObject
         self._connector = False       # if the GObject is a connector, such as a GWire
 
+        # Callbacks to user code
+        self.callbacks = []
+
     @staticmethod
     def factory(a_class, *args, **kwargs):
         return a_class(*args, **kwargs)
@@ -98,6 +101,10 @@ class GObject:
     def next_id():
         GObject.gobject_id += 1
         return GObject.gobject_id
+
+    def register_callback(self, f):
+        print(f"DEBUG: Adding function {f} to callbacks for {self}")
+        self.callbacks.append(f)
 
     def screen_to_canvas_coords(self, screen_x, screen_y):
         canvas_x = self.gcanvas.canvas.canvasx(screen_x)
@@ -174,13 +181,18 @@ class GObject:
         self.gcanvas.canvas.bind("<<Selection>>", self.on_selection_event, "+")
 
     def on_button_click(self, event):
+        # TODO: This will likely need to change at some point, as there may be other ways to handle a click
+        # TODO: other than just a toggle()
         #print(f"DEBUG: CLICKABLE ITEM -- CLICK   Button-{event.num} Item: {event.widget.find_withtag('current')}")
         canvas_item = event.widget.find_withtag('current')
         g_item = self.get_item_by_id(canvas_item)
         if g_item.clickable:
             #print(f"DEBUG: GItem {g_item} is clickable")
             # lookup my parent GObject and toggle
-            self.gcanvas.get_gobject_by_id((g_item.item,)).toggle()
+            g_object = self.gcanvas.get_gobject_by_id((g_item.item,))
+            g_object.toggle()
+            for f in g_object.callbacks:
+                f(g_object)
 
     def on_start_connection(self, event):
         """ Initiate connection """
@@ -603,6 +615,10 @@ class GObject:
     def redraw(self):
         """ do whatever is necessary to re-draw the GObject """
         #print(f"DEBUG: Draw GObject {self}")
+        pass
+
+    def toggle(self):
+        """ some GObjects support a toggleable state """
         pass
 
     def node(self, name):

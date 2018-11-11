@@ -136,13 +136,22 @@ polygon1 = gcanvas.create('GPolygon', coords=polygon1_coords, label="Polygon1")
 polygon1.add_mouse_bindings()
 polygon1.show()
 
+def toggle_switch_callback(g_object):
+    if g_object.state:
+        state = "ON"
+    else:
+        state = "OFF"
+    print(f"DEBUG: {g_object.label} is {state}")
+
 switch1 = gcanvas.create('GToggleSwitch', 5060, 5420, label="ToggleSwitch1")
 switch1.add_mouse_bindings()
 switch1.show()
+switch1.register_callback(toggle_switch_callback)
 
 switch2 = gcanvas.create('GToggleSwitch', 5060, 5460, label="ToggleSwitch2")
 switch2.add_mouse_bindings()
 switch2.show()
+switch2.register_callback(toggle_switch_callback)
 
 # Print some debug info
 gcanvas.known_types()

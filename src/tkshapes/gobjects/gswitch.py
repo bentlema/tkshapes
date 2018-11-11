@@ -19,7 +19,7 @@ class GToggleSwitch(GObject):
         # toggleable items have state that controls some GItems position
         # Note: do not change this initial default, as we assume that the switch
         # is initially off when we draw it below, and toggle() depends on that
-        self._state = False
+        self.state = False
 
     def add(self):
 
@@ -124,16 +124,16 @@ class GToggleSwitch(GObject):
     def toggle(self):
         """ toggleable parts go here """
 
-        if self._state:
+        if self.state:
             dx = self._capsule_length
             #print(f"DEBUG: Switch = ON --> OFF {dx}")
             self._items['inner'].fill_color = '#777777'
-            self._state = False
+            self.state = False
         else:
             dx = -1 * self._capsule_length
             #print(f"DEBUG: Switch = OFF --> ON {dx}")
             self._items['inner'].fill_color = 'green'
-            self._state = True
+            self.state = True
 
         # slide the switch button left or right
         self.gcanvas.canvas.move(self._items['slider_switch'].item, dx, 0)
