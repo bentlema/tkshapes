@@ -194,6 +194,8 @@ class GObject:
             for f in g_object.callbacks:
                 f(g_object)
 
+        self.gcanvas.canvas.event_generate("<<MyButtonClick>>")
+
     def on_start_connection(self, event):
         """ Initiate connection """
         canvas_item = event.widget.find_withtag('current')

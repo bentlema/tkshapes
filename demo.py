@@ -141,7 +141,33 @@ def toggle_switch_callback(g_object):
         state = "ON"
     else:
         state = "OFF"
-    print(f"DEBUG: {g_object.label} is {state}")
+    print(f"DEBUG: toggle_switch_callback(): {g_object.label} is {state}")
+
+def toggle_switch_event_handler(event):
+
+    canvas_item = event.widget.find_withtag('current')
+    print(f"DEBUG: canvas_item = {canvas_item}")
+
+    g_item = gcanvas.get_item_by_id(canvas_item)
+    print(f"DEBUG: GItem = {g_item}")
+
+    g_object = gcanvas.get_gobject_by_id((g_item.item,))
+    print(f"DEBUG: GObject = {g_object}, label = {g_object.label}, state = {g_object.state}")
+
+    if g_object.state:
+        state = "ON"
+    else:
+        state = "OFF"
+    print(f"DEBUG: toggle_event_handler(): {g_object.label} is {state}")
+
+    #event_attributes = [
+    #    'serial', 'num', 'height', 'keycode', 'state', 'time', 'width', 'x', 'y', 'char',
+    #    'send_event', 'keysym', 'keysym_num', 'type', 'widget', 'x_root', 'y_root', 'delta'
+    #]
+    #for a in event_attributes:
+    #    print(f"DEBUG: toggle_event_handler {a} = {getattr(event, a)}")
+
+gcanvas.canvas.bind("<<MyButtonClick>>", toggle_switch_event_handler, "+")
 
 switch1 = gcanvas.create('GToggleSwitch', 5060, 5420, label="ToggleSwitch1")
 switch1.add_mouse_bindings()
