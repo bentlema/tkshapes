@@ -124,17 +124,29 @@ class GToggleSwitch(GObject):
     def toggle(self):
         """ toggleable parts go here """
 
+        zl = self.gcanvas.zoom_level
+
         if self.state:
-            dx = self._capsule_length
-            #print(f"DEBUG: Switch = ON --> OFF {dx}")
+            dx = self._capsule_length * zl
+            print(f"DEBUG: Switch = ON --> OFF {dx}")
             self._items['inner'].fill_color = '#777777'
             self.state = False
         else:
-            dx = -1 * self._capsule_length
-            #print(f"DEBUG: Switch = OFF --> ON {dx}")
+            dx = -1 * self._capsule_length * zl
+            print(f"DEBUG: Switch = OFF --> ON {dx}")
             self._items['inner'].fill_color = 'green'
             self.state = True
 
-        # slide the switch button left or right
-        self.gcanvas.canvas.move(self._items['slider_switch'].item, dx, 0)
+        steps = 5
+        step_length = dx / steps
+        for step in range(steps):
+            position = step_length
+            self.gcanvas.canvas.move(self._items['slider_switch'].item, position, 0)
+            # TODO: This is a quick hack to animate the slider, and works fine as we have a small number of steps
+            # TODO: However, we should eventually re-do any animation to use the after() method as discussed on
+            # TODO: these StackOverflow pages:
+            # TODO:
+            # TODO: https://stackoverflow.com/questions/21357178/python-tkinter-refresh-canvas
+            # TODO: https://stackoverflow.com/questions/25430786/moving-balls-in-tkinter-canvas/25431690#25431690
+            self.gcanvas.canvas.update_idletasks()
 
