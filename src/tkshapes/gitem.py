@@ -529,10 +529,11 @@ class GOvalItem(GItem):
 class GPolygonItem(GItem):
     """ Draw Polygon on a GCanvas """
 
-    def __init__(self, gcanvas, coords, name_tag=None):
+    def __init__(self, gcanvas, coords, name_tag=None, **kwargs):
 
         initial_x = coords[0]
         initial_y = coords[1]
+        self._extra_kwargs = kwargs
 
         super().__init__(gcanvas, initial_x, initial_y, name_tag)
 
@@ -547,7 +548,8 @@ class GPolygonItem(GItem):
             width=self.outline_width,        # property
             activewidth=self.outline_width,  # property
             state=self._item_state,
-            tags=self._tag)
+            tags=self._tag,
+            **self._extra_kwargs)
 
         # the item should be raisable by default unless overridden in the GObject
         self.raisable = True

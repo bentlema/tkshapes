@@ -19,7 +19,7 @@ class GToggleSwitch(GObject):
         # toggleable items have state that controls some GItems position
         # Note: do not change this initial default, as we assume that the switch
         # is initially off when we draw it below, and toggle() depends on that
-        self.state = False
+        self._state = False
 
     def add(self):
 
@@ -77,7 +77,7 @@ class GToggleSwitch(GObject):
         self._items['output_dot'].connectable_initiator = True
         self._items['output_dot'].show_selection = False
 
-        self._nodes['output'] = GNode(name="GAndGate Output", g_object=self, g_item=self._items['output_dot'])
+        self._nodes['output'] = GNode(name="GToggleSwitch Output", g_object=self, g_item=self._items['output_dot'])
 
         self._items['body'] = GPolygonItem(self.gcanvas, self._points1, self._tag)
         self._items['body'].add()
@@ -122,21 +122,35 @@ class GToggleSwitch(GObject):
         self._items['slider_switch'].highlight_group = "body_and_slider"
 
     def toggle(self):
-        """ toggleable parts go here """
-
-        zl = self.gcanvas.zoom_level
-
-        if self.state:
-            dx = self._capsule_length * zl
-            print(f"DEBUG: Switch = ON --> OFF {dx}")
-            self._items['inner'].fill_color = '#777777'
+        if self._state:
+            print(f"DEBUG: Switch = ON --> OFF")
             self.state = False
         else:
-            dx = -1 * self._capsule_length * zl
-            print(f"DEBUG: Switch = OFF --> ON {dx}")
-            self._items['inner'].fill_color = 'green'
+            print(f"DEBUG: Switch = OFF --> ON")
             self.state = True
 
+    @property
+    def state(self):
+        return self._state
+
+    @state.setter
+    def state(self, value):
+        if value and not self._state:
+            # adjust the item for True/ON
+            dx = -1 * self._capsule_length * self.gcanvas.zoom_level
+            #print(f"DEBUG: Switch = OFF --> ON {dx}")
+            self._items['inner'].fill_color = 'green'
+            self._state = True
+            self._move_slider(dx)
+        elif not value and self._state:
+            # adjust the item for False/OFF
+            dx = self._capsule_length * self.gcanvas.zoom_level
+            #print(f"DEBUG: Switch = ON --> OFF {dx}")
+            self._items['inner'].fill_color = '#777777'
+            self._state = False
+            self._move_slider(dx)
+
+    def _move_slider(self, dx):
         steps = 5
         step_length = dx / steps
         for step in range(steps):

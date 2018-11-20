@@ -181,8 +181,6 @@ class GObject:
         self.gcanvas.canvas.bind("<<Selection>>", self.on_selection_event, "+")
 
     def on_button_click(self, event):
-        # TODO: This will likely need to change at some point, as there may be other ways to handle a click
-        # TODO: other than just a toggle()
         #print(f"DEBUG: CLICKABLE ITEM -- CLICK   Button-{event.num} Item: {event.widget.find_withtag('current')}")
         canvas_item = event.widget.find_withtag('current')
         g_item = self.get_item_by_id(canvas_item)
@@ -190,7 +188,7 @@ class GObject:
             #print(f"DEBUG: GItem {g_item} is clickable")
             # lookup my parent GObject and toggle
             g_object = self.gcanvas.get_gobject_by_id((g_item.item,))
-            g_object.toggle()
+            # call all callbacks
             for f in g_object.callbacks:
                 f(g_object)
 

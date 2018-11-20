@@ -136,14 +136,42 @@ polygon1 = gcanvas.create('GPolygon', coords=polygon1_coords, label="Polygon1")
 polygon1.add_mouse_bindings()
 polygon1.show()
 
+bulb1 = gcanvas.create('GLightBulb', 5210, 5500, label="LightBulb1")
+bulb1.add_mouse_bindings()
+bulb1.show()
+
+#
+# There are two options for servicing events for clickable objects.
+# 1) handling the virtual event <<MyButtonClick>>
+# 2) registering one or more callbacks
+#
+# If you're handling the operation of a toggle switch (or some other
+# multi-state GObject, you'll likely be calling a method such as toggle()
+# when events come in, but you want to be sure to not handle the event twice.
+# For example, if you're using boch callbacks and event handles, you wouldn't
+# want both to issue a g_object.toggle(), otherwise you'd end up canceling
+# out the event.
+#
+# The callback protocol may change, but for now I'm just passing a ref to the
+# GObject that was involved.  The event-handler method works the normal way,
+# with the event object being passed in to the handler.
+#
+# The order of a callback vs an event handler being called depends on
+# the order in which the binding was made.  Since the GObject binding is always
+# made first (within the GObject __init__(), all of the registered callbacks
+# will be executed first (before any event handlers defined below.)
+
 def toggle_switch_callback(g_object):
+    print("------------------------------------------------------------------------------")
     if g_object.state:
         state = "ON"
     else:
         state = "OFF"
     print(f"DEBUG: toggle_switch_callback(): {g_object.label} is {state}")
 
-def toggle_switch_event_handler(event):
+def clicked_event_handler(event):
+
+    print("------------------------------------------------------------------------------")
 
     canvas_item = event.widget.find_withtag('current')
     print(f"DEBUG: canvas_item = {canvas_item}")
@@ -154,30 +182,29 @@ def toggle_switch_event_handler(event):
     g_object = gcanvas.get_gobject_by_id((g_item.item,))
     print(f"DEBUG: GObject = {g_object}, label = {g_object.label}, state = {g_object.state}")
 
-    if g_object.state:
-        state = "ON"
-    else:
-        state = "OFF"
-    print(f"DEBUG: toggle_event_handler(): {g_object.label} is {state}")
+    # What type of GObject was clicked?
+    # TODO: should we add a GObject "type" category, rather than using label???
+    # TODO: (we need some way to distinguish between different object types that
+    # TODO: have been clicked, as each one may be handled differently.)
+    if g_object.label.startswith("ToggleSwitch"):
+        g_object.toggle()
+        if g_object.state:
+            state = "ON"
+        else:
+            state = "OFF"
+        print(f"DEBUG: clicked_event_handler(): {g_object.label} is {state}")
 
-    #event_attributes = [
-    #    'serial', 'num', 'height', 'keycode', 'state', 'time', 'width', 'x', 'y', 'char',
-    #    'send_event', 'keysym', 'keysym_num', 'type', 'widget', 'x_root', 'y_root', 'delta'
-    #]
-    #for a in event_attributes:
-    #    print(f"DEBUG: toggle_event_handler {a} = {getattr(event, a)}")
-
-gcanvas.canvas.bind("<<MyButtonClick>>", toggle_switch_event_handler, "+")
+gcanvas.canvas.bind("<<MyButtonClick>>", clicked_event_handler, "+")
 
 switch1 = gcanvas.create('GToggleSwitch', 5060, 5420, label="ToggleSwitch1")
 switch1.add_mouse_bindings()
 switch1.show()
-switch1.register_callback(toggle_switch_callback)
+#switch1.register_callback(toggle_switch_callback)
 
 switch2 = gcanvas.create('GToggleSwitch', 5060, 5460, label="ToggleSwitch2")
 switch2.add_mouse_bindings()
 switch2.show()
-switch2.register_callback(toggle_switch_callback)
+#switch2.register_callback(toggle_switch_callback)
 
 # Print some debug info
 gcanvas.known_types()
