@@ -107,6 +107,8 @@ class GCanvas(tk.Frame):
 
         # Bindings for Zooming in/out
         self.canvas.bind("<Control-MouseWheel>", self.on_zoom)
+        self.canvas.bind('<Control-4>', self.on_zoom, add='+')
+        self.canvas.bind('<Control-5>', self.on_zoom, add='+')
 
         # this data is used to keep track of a canvas object being dragged
         self._drag_data = {
@@ -194,6 +196,7 @@ class GCanvas(tk.Frame):
 
     def on_mousewheel(self, event):
         # On the Trackpad Horizontal_Swipe looks like SHIFT + Vertical_Swipe
+        # (This only works on MacOS)
         shift = (event.state & 0x1) != 0
         if shift:
             self.canvas.xview_scroll(-1 * event.delta, "units")
@@ -204,6 +207,9 @@ class GCanvas(tk.Frame):
         """
         We scale the canvas and all items on it to simulate a zoom in/out
         """
+
+        #print(f"DEBUG: on_zoom() delta={event.delta} num={event.num} state={event.state} x={event.x} y={event.y}")
+
         sf = 1.0
         w = self.canvas.winfo_width()
         h = self.canvas.winfo_height()
@@ -214,11 +220,11 @@ class GCanvas(tk.Frame):
         cy = self.canvas.canvasy(event.y)
 
         # Zoom In
-        if (event.delta > 0) and ((y1 - y0) <= 50000):
+        if (event.delta > 0 or event.num == 4) and ((y1 - y0) <= 50000):
             sf = 1.1  # Just a tad more than 1
 
         # Zoom Out
-        elif (event.delta < 0) and ((x1 - x0) - 1000 >= w):
+        elif (event.delta < 0 or event.num == 5) and ((x1 - x0) - 1000 >= w):
             sf = 0.9  # Just a tad less than 1
 
         if sf != 1.0:
