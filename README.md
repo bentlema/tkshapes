@@ -72,5 +72,10 @@ I'm developing and testing **ONLY** on macOS.
    is slightly off.  This appears to be a Tkinter bug, but I'm not 100% sure.
    Instead of using full-screen mode, you may click Option-GreenDot to maximize
    the window to use the full screen without actually entering full-screen mode.
+   
+   **FIXED:** this issue has been fixed with Python 3.7 releases.  I've tested both
+   the standard CPython and Anaconda distributions, and this issue is no longer
+   present.  It appears that "Fullscreen Mode" simply does a window maximize now,
+   automatically accomplishing the workaround mentioned above.
 
 
