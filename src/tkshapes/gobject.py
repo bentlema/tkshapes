@@ -1,4 +1,4 @@
-
+from .gevent import GEvent
 
 class GObject:
     """
@@ -89,6 +89,9 @@ class GObject:
         self._clickable = True        # if the GObject can be clicked
         self._connectable = False     # if the GObject can be connected to another connectable GObject
         self._connector = False       # if the GObject is a connector, such as a GWire
+
+        # Some GObjects can have a True/False state
+        self._state = None
 
         # Callbacks to user code
         self.callbacks = []
@@ -185,14 +188,28 @@ class GObject:
         canvas_item = event.widget.find_withtag('current')
         g_item = self.get_item_by_id(canvas_item)
         if g_item.clickable:
-            #print(f"DEBUG: GItem {g_item} is clickable")
-            # lookup my parent GObject and toggle
+            # lookup my parent GObject
             g_object = self.gcanvas.get_gobject_by_id((g_item.item,))
-            # call all callbacks
+
+            # call any/all callbacks
             for f in g_object.callbacks:
                 f(g_object)
 
-        self.gcanvas.canvas.event_generate("<<MyButtonClick>>")
+            # construct event payload
+            event_data = {
+                'canvas_item': canvas_item,
+                'g_item': g_item,
+                'g_object': g_object,
+            }
+
+            # create a GEvent and populate event_data
+            g_event = GEvent('ClickableClicked', event_data)
+
+            # put GEvent on GEventQueue
+            self.gcanvas.event_queue.put_event(g_event)
+
+            # generate virtual event which can be handled in user code
+            self.gcanvas.canvas.event_generate("<<ClickableClicked>>")
 
     def on_start_connection(self, event):
         """ Initiate connection """
@@ -277,6 +294,31 @@ class GObject:
                 to_g_object.node(to_node_name)
             )
             new_wire.update()
+
+            # call all callbacks
+            for f in self.callbacks:
+                f(new_wire)
+
+            # construct event payload
+            event_data = {
+                'from_canvas_item': connect_from_item,
+                'from_g_item': from_g_item,
+                'from_g_object': from_g_object,
+                'from_g_node': from_g_object.node(from_node_name),
+                'to_canvas_item': connect_to_item,
+                'to_g_item': to_g_item,
+                'to_g_object': to_g_object,
+                'to_g_node': to_g_object.node(to_node_name),
+            }
+
+            # create a GEvent and populate event_data
+            g_event = GEvent('AddConnection', event_data)
+
+            # put GEvent on GEventQueue
+            self.gcanvas.event_queue.put_event(g_event)
+
+            # generate virtual event which can be handled by the library's user
+            self.gcanvas.canvas.event_generate("<<AddConnection>>")
         else:
             #print(f"DEBUG: END CONNECTION - Button-{event.num}")
             #print(f"       --> Where?")
@@ -727,4 +769,12 @@ class GObject:
     @connector.setter
     def connector(self, value):
         self._connector = bool(value)
+
+    @property
+    def state(self):
+        return self._state
+
+    @state.setter
+    def state(self, value):
+        pass
 

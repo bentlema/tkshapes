@@ -123,10 +123,10 @@ class GToggleSwitch(GObject):
 
     def toggle(self):
         if self._state:
-            print(f"DEBUG: Switch = ON --> OFF")
+            #print(f"DEBUG: Switch = ON --> OFF")
             self.state = False
         else:
-            print(f"DEBUG: Switch = OFF --> ON")
+            #print(f"DEBUG: Switch = OFF --> ON")
             self.state = True
 
     @property

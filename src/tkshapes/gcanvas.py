@@ -2,6 +2,8 @@
 import tkinter as tk
 import tkinter.ttk as ttk
 
+from .gevent import GEventQueue
+
 from .gobject import GObject
 
 from .gobjects.gwire import GWire
@@ -42,6 +44,10 @@ class GCanvas(tk.Frame):
         # The key will be the type name (e.g. 'Rectangle') with the value being a reference to the corresponding object
         # These types are registered with the GCanvas using the register_gobject() method.
         self.gobject_types = {}
+
+        # The GCanvas has an associated GEventQueue which is the primary method of communication between
+        # this library and the user's code
+        self.event_queue = GEventQueue('GCanvas_Event_Queue', maxsize=100)
 
         # Where to send status messages
         self.status_var = None
