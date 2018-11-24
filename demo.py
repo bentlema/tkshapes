@@ -4,7 +4,7 @@ import tkinter as tk
 import tkinter.ttk as ttk
 
 from tkapp import AppRootWindow
-from tkshapes import GCanvas
+from tkshapes import GCanvas, GToggleSwitch
 
 
 root = tk.Tk()
@@ -148,20 +148,17 @@ bulb1 = gcanvas.create('GLightBulb', 5210, 5500, label="LightBulb1")
 bulb1.add_mouse_bindings()
 bulb1.show()
 
+
 def event_handler(event):
 
     print("------------------------------------------------------------------------------")
-
-    # as this data is passed via a GEvent, we dont need to do this
-    #canvas_item = event.widget.find_withtag('current')
-    #g_item = gcanvas.get_item_by_id(canvas_item)
-    #g_object = gcanvas.get_gobject_by_id((g_item.item,))
 
     # Check GCanvas Event Queue for events to handle
     if not gcanvas.event_queue.is_empty():
         print(f"DEBUG: Event Queue Size = {gcanvas.event_queue.get_qsize()}")
         event = gcanvas.event_queue.get_event()
         if event:
+
             if event.event_type == 'ClickableClicked':
                 canvas_item = event.event_data['canvas_item']
                 g_item = event.event_data['g_item']
@@ -170,8 +167,7 @@ def event_handler(event):
                 print(f"DEBUG: Event:{event.event_id}: GItem = {g_item}")
                 print(f"DEBUG: Event:{event.event_id}: GObject = {g_object}, label = {g_object.label}, state = {g_object.state}")
 
-                # TODO: dont depend on label -- find the correct syntax for checking GObject type == GToggleSwitch
-                if g_object.label.startswith("ToggleSwitch"):
+                if type(g_object) is GToggleSwitch:
                     g_object.toggle()
                     if g_object.state:
                         state = "ON"
@@ -200,6 +196,12 @@ def event_handler(event):
 
         print(f"DEBUG: Event Queue Size = {gcanvas.event_queue.get_qsize()}")
 
+
+# Demonstrate how we can receive virtual events from the tkshapes
+# library, and then handle each type of event appropriately. We
+# bind to the documented virtual event names, and then handle the
+# events using one or more handlers.  As we can check the event
+# type, we can use the same event_handler() in this case.
 gcanvas.canvas.bind("<<ClickableClicked>>", event_handler, "+")
 gcanvas.canvas.bind("<<AddConnection>>", event_handler, "+")
 
