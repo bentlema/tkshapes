@@ -4,8 +4,8 @@ https://packaging.python.org/en/latest/distributing.html
 https://github.com/pypa/sampleproject
 """
 
-import setuptools
 from os import path
+import setuptools
 
 here = path.abspath(path.dirname(__file__))
 
@@ -15,7 +15,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setuptools.setup(
     name='tkshapes',
-    version='0.0.3',
+    version='0.0.4',
     description='Draw and interact with shapes on the Tkinter canvas',
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -27,6 +27,7 @@ setuptools.setup(
         'Intended Audience :: Developers',
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
     ],
     keywords='tkinter',
     packages=setuptools.find_packages(where="src", exclude=['contrib', 'docs', 'tests']),
