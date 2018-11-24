@@ -1,3 +1,5 @@
+test:
+	cd tests && pytest --verbose -s
 
 dist:
 	pip install --upgrade pip setuptools twine wheel
