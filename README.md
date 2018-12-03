@@ -1,4 +1,5 @@
-﻿
+[![Latest Version](https://img.shields.io/pypi/v/tkshapes.svg)](https://pypi.org/project/tkshapes/)
+
 # Tkinter Canvas Shapes
 
 **Note:**  This is a Python 3.6+ module.
