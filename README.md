@@ -54,6 +54,23 @@ Install tkapp and tkshapes (The demo.py depends on the tkapp module as well.)
 pip install tkapp tkshapes
 ```
 
+## Running the Demo
+
+The demo.py can be downloaded by itself, or you can clone this repo and
+find it at the top level.
+
+```
+git clone https://github.com/bentlema/tkshapes.git
+```
+
+Assuming you've already activated your virtual environment and installed the
+tkapp and tkshapes modules within it (as shown above), you should now be able
+to run the demo.py:
+
+```
+./tkshapes/demo.py
+```
+
 ## Alpha - In-Development
 
 This library is being developed so that I can use it to build a Digital Logic
